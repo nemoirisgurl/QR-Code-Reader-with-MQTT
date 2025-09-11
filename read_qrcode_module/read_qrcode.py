@@ -2,16 +2,24 @@ import cv2
 import numpy as np
 import paho.mqtt.client as mqtt
 import time
+import configparser
+
+# อ่านไฟล์ config.ini
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 print(f"Python OpenCV version: {cv2.__version__}")
 CV2_FRAME = 'QR Code Scanner'
-MQTT_BROKER = "localhost"
-MQTT_PORT = 1883
-MQTT_TOPIC = "openhouse/checkin-checkout"
-LOCATION = "Place1"
-SCAN_COOLDOWN = 5
-READER_SIZE= 300
-
+MQTT_BROKER = config.get('MQTT', 'Broker')
+MQTT_PORT = config.getint('MQTT', 'Port')
+MQTT_TOPIC = config.get('MQTT', 'Topic')
+LOCATION = config.get('Device', 'Location')
+SCAN_COOLDOWN = config.getint('Device', 'ScanCooldown')
+READER_SIZE = config.getint('Device', 'ReaderSize')
+RED_COLOR = (0, 0, 255)
+GREEN_COLOR = (0, 255, 0)
+BLUE_COLOR = (255, 0, 0)
+CYAN_COLOR = (255, 255, 0)
 last_token = None
 last_scan_time = 0
 
@@ -19,7 +27,7 @@ client = mqtt.Client(protocol=mqtt.MQTTv311)
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
 client.loop_start()
 
-def drawText(frame, x, y, text, color=(0, 255, 0)):
+def drawText(frame, x, y, text, color=GREEN_COLOR):
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.75
     thickness = 2
@@ -40,8 +48,8 @@ while True:
     roi_x = int((frame_w - READER_SIZE) / 2)
     roi_y = int((frame_h - READER_SIZE) / 2)
 
-    cv2.rectangle(frame, (roi_x, roi_y), (roi_x + READER_SIZE, roi_y + READER_SIZE), (255, 0, 0), 2)
-    drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", color=(255, 0, 0))
+    cv2.rectangle(frame, (roi_x, roi_y), (roi_x + READER_SIZE, roi_y + READER_SIZE), BLUE_COLOR, 2)
+    drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", BLUE_COLOR)
     roi_frame = frame[roi_y:roi_y + READER_SIZE, roi_x:roi_x + READER_SIZE]
     token, points, _ = qr.detectAndDecode(roi_frame)
 
@@ -55,16 +63,16 @@ while True:
                 raw_data = f"{token},{scan_time}, {LOCATION}"
                 print(f"Token: {token}, Time: {scan_time}, Location: {LOCATION}")
                 client.publish(MQTT_TOPIC, raw_data)
-                cv2.polylines(frame, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
+                cv2.polylines(frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2)
                 x, y = pts[0][0]
-                drawText(frame, x, y - 10, "Scanned", color=(0, 255, 0))
+                drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
                 last_token = token
                 last_scan_time = current_time
             else:
                 # รอ cooldown
-                cv2.polylines(frame, [pts], isClosed=True, color=(255, 255, 0), thickness=2) 
+                cv2.polylines(frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2) 
                 x, y = pts[0][0]          
-                drawText(frame, x, y - 10, "Wait...", color=(255, 255, 0))
+                drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
             
 
     cv2.imshow(CV2_FRAME, frame)
