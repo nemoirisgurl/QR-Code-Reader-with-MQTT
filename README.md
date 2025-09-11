@@ -29,7 +29,12 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-3.  **Install the required Python packages:**
+3.  Install the required Python packages:
 ```bash
 pip install -r requirements.txt
+```
+
+4. Run MQTT Broker:
+```bash
+mosquitto_sub -h localhost -p 1883 -t "openhouse/checkin-checkout" -v
 ```
