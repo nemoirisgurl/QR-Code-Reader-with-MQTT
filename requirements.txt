@@ -3,4 +3,3 @@ opencv-python
 pyzbar
 paho-mqtt
 PyJWT 
-mosquitto-clients

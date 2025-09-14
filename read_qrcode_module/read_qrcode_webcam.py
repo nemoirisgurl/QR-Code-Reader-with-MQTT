@@ -63,39 +63,42 @@ while True:
     )
     drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", BLUE_COLOR)
     roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
-    token, points, _ = qr.detectAndDecode(roi_frame)
+    current_time = time.time()
+    if (current_time - last_scan_time) > SCAN_COOLDOWN:
+        token, points, _ = qr.detectAndDecode(roi_frame)
+        if points is not None:
+            if token:
+                pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
+                if (
+                    token != last_token
+                    or (current_time - last_scan_time) > SCAN_COOLDOWN
+                ):
+                    time.sleep(0.5)
+                    scan_time = time.strftime("%H:%M:%S", time.localtime(current_time))
+                    raw_data = f"{token},{scan_time}, {LOCATION}"
+                    print(f"Token: {token}, Time: {scan_time}, Location: {LOCATION}")
+                    client.publish(MQTT_TOPIC, raw_data)
+                    cv2.polylines(
+                        frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
+                    )
+                    x, y = pts[0][0]
+                    drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
+                    last_token = token
+                    last_scan_time = current_time
+                else:
+                    # รอ cooldown
+                    cv2.polylines(
+                        frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2
+                    )
+                    x, y = pts[0][0]
+                    drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
 
-    if points is not None:
-        current_time = time.time()
-        if token:
-            pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
-            if token != last_token or (current_time - last_scan_time) > SCAN_COOLDOWN:
-                time.sleep(0.5)
-                scan_time = time.strftime("%H:%M:%S", time.localtime(current_time))
-                raw_data = f"{token},{scan_time}, {LOCATION}"
-                print(f"Token: {token}, Time: {scan_time}, Location: {LOCATION}")
-                client.publish(MQTT_TOPIC, raw_data)
-                cv2.polylines(
-                    frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
-                )
-                x, y = pts[0][0]
-                drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
-                last_token = token
-                last_scan_time = current_time
-            else:
-                # รอ cooldown
-                cv2.polylines(
-                    frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2
-                )
-                x, y = pts[0][0]
-                drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
-
-    cv2.imshow(CV2_FRAME, frame)
-    if (
-        cv2.waitKey(1) == ord("q")
-        or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
-    ):
-        break
+        cv2.imshow(CV2_FRAME, frame)
+        if (
+            cv2.waitKey(1) == ord("q")
+            or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
+        ):
+            break
 
 cap.release()
 cv2.destroyAllWindows()
