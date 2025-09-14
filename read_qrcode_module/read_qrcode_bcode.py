@@ -1,6 +1,7 @@
 import paho.mqtt.client as mqtt
 import time
 import configparser
+from qr_reader import QR_Data
 
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
@@ -35,12 +36,11 @@ while True:
             if token != last_token:
                 last_token = token
                 last_scan_time = current_time
-                timestamps = int(current_time)
-                raw_data = f"{token},{timestamps}, {DEVICE_LOCATION}"
-                print(
-                    f"Token: {token}, Time: {timestamps}, DEVICE_Location: {DEVICE_LOCATION}"
-                )
-                client.publish(MQTT_TOPIC, raw_data)
+                timestamp = int(current_time)
+                qr_data = QR_Data(token, DEVICE_LOCATION, timestamp)
+                arranged_data = qr_data.get_data()
+                print(arranged_data)
+                client.publish(MQTT_TOPIC, arranged_data)
             else:
                 # รอ cooldown
                 print("Duplicate token.")

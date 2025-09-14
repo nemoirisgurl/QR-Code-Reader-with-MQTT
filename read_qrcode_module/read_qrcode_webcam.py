@@ -3,6 +3,7 @@ import numpy as np
 import paho.mqtt.client as mqtt
 import time
 import configparser
+from qr_reader import QR_Data
 
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
@@ -66,7 +67,7 @@ while True:
     current_time = time.time()
     if (current_time - last_scan_time) > SCAN_COOLDOWN:
         token, points, _ = qr.detectAndDecode(roi_frame)
-        if points is not None:
+        if points is not None and cv2.contourArea(points) > 0:
             if token:
                 pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
                 if (
@@ -74,10 +75,11 @@ while True:
                     or (current_time - last_scan_time) > SCAN_COOLDOWN
                 ):
                     time.sleep(0.5)
-                    scan_time = time.strftime("%H:%M:%S", time.localtime(current_time))
-                    raw_data = f"{token},{scan_time}, {LOCATION}"
-                    print(f"Token: {token}, Time: {scan_time}, Location: {LOCATION}")
-                    client.publish(MQTT_TOPIC, raw_data)
+                    scan_time = int(current_time)
+                    qr_data = QR_Data(token, LOCATION, scan_time)
+                    arranged_data = qr_data.get_data()
+                    print(arranged_data)
+                    client.publish(MQTT_TOPIC, arranged_data)
                     cv2.polylines(
                         frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
                     )
