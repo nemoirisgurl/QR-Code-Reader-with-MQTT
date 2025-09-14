@@ -48,7 +48,6 @@ cap = cv2.VideoCapture(0)
 qr = cv2.QRCodeDetector()
 
 cv2.namedWindow(CV2_FRAME)
-
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -67,7 +66,7 @@ while True:
     current_time = time.time()
     if (current_time - last_scan_time) > SCAN_COOLDOWN:
         token, points, _ = qr.detectAndDecode(roi_frame)
-        if points is not None and cv2.contourArea(points) > 0:
+        if points is not None:
             if token:
                 pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
                 if (
