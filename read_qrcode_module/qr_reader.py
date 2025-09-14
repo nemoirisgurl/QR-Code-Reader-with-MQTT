@@ -1,4 +1,4 @@
-# ข้อมูล
+# ข้อมูลที่ได้จากการสแกน OR Code
 class QR_Data:
     def __init__(self, token, location, timestamp):
         self.token = token

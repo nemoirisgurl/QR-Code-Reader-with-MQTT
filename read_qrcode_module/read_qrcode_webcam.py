@@ -44,7 +44,7 @@ def drawText(frame, x, y, text, color=GREEN_COLOR):
     cv2.putText(frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)  # เปลี่ยน /dev/video*
 qr = cv2.QRCodeDetector()
 
 cv2.namedWindow(CV2_FRAME)
