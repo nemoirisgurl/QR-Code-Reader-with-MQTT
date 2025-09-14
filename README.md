@@ -2,7 +2,7 @@
 This project tends to be a prototype of QR Code Reader module for Software Development Practice I
 ## Contents
 1. [Installation](#installation)
-
+2. [Running](#running)
 ## Installation
 Follow these steps to set up the project environment.
 
@@ -38,4 +38,14 @@ pip install -r requirements.txt
 4. Run MQTT Broker:
 ```bash
 mosquitto_sub -h localhost -p 1883 -t "openhouse/checkin-checkout" -v
+```
+
+## Running
+Use this command
+```bash
+python read_qrcode_module/read_qrcode_bcode.py
+```
+or
+```bash
+python read_qrcode_module/read_qrcode_webcam.py
 ```
