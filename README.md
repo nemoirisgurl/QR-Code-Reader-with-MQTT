@@ -3,6 +3,8 @@ This project tends to be a prototype of QR Code Reader module for Software Devel
 ## Contents
 1. [Installation](#installation)
 2. [Running](#running)
+3. [Footage](#footage)
+
 ## Installation
 Follow these steps to set up the project environment.
 
@@ -49,3 +51,9 @@ or
 ```bash
 python read_qrcode_module/read_qrcode_webcam.py
 ```
+Make sure you run the command on the **QR-Code-Reader-with-MQTT** folder and different terminal from MQTT Broker
+## Footage
+
+<img src="src/cv2screen.png" alt="OpenCV QR Code Scanner" width="300" height="400"/>
+<img src="src/publisher.png" alt="Client result (Publish to broker)" width="300" height="400"/>
+<img src="src/subscriber.png" alt="Server result (Subscribe from client)" width="300" height="400"/>
