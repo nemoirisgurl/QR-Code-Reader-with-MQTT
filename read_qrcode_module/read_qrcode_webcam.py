@@ -26,6 +26,7 @@ BLUE_COLOR = (255, 0, 0)
 YELLOW_COLOR = (255, 255, 0)
 last_token = None
 last_scan_time = 0
+checkin_checkout_toggle = 1  # 1 check-in 0 check-out
 
 client = mqtt.Client(callback_api_version=2, client_id=f"scanner-{LOCATION}")
 try:
@@ -48,58 +49,76 @@ cap = cv2.VideoCapture(0)  # เปลี่ยน /dev/video*
 qr = cv2.QRCodeDetector()
 
 cv2.namedWindow(CV2_FRAME)
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
-    frame_h, frame_w, _ = frame.shape
-    roi_x = int((frame_w - READER_SIZE) / 2)
-    roi_y = int((frame_h - READER_SIZE) / 2)
-
-    cv2.rectangle(
-        frame, (roi_x, roi_y), (roi_x + READER_SIZE, roi_y + READER_SIZE), BLUE_COLOR, 2
-    )
-    drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", BLUE_COLOR)
-    roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
-    current_time = time.time()
-    if (current_time - last_scan_time) > SCAN_COOLDOWN:
-        token, points, _ = qr.detectAndDecode(roi_frame)
-        if points is not None:
-            if token:
-                pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
-                if (
-                    token != last_token
-                    or (current_time - last_scan_time) > SCAN_COOLDOWN
-                ):
-                    time.sleep(0.5)
-                    scan_time = int(current_time)
-                    qr_data = QR_Data(token, LOCATION, scan_time)
-                    arranged_data = qr_data.get_data()
-                    print(arranged_data)
-                    client.publish(MQTT_TOPIC, arranged_data)
-                    cv2.polylines(
-                        frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
-                    )
-                    x, y = pts[0][0]
-                    drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
-                    last_token = token
-                    last_scan_time = current_time
-                else:
-                    # รอ cooldown
-                    cv2.polylines(
-                        frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2
-                    )
-                    x, y = pts[0][0]
-                    drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
-
-        cv2.imshow(CV2_FRAME, frame)
-        if (
-            cv2.waitKey(1) == ord("q")
-            or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
-        ):
+try:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
             break
+
+        # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
+        frame_h, frame_w, _ = frame.shape
+        roi_x = int((frame_w - READER_SIZE) / 2)
+        roi_y = int((frame_h - READER_SIZE) / 2)
+
+        cv2.rectangle(
+            frame,
+            (roi_x, roi_y),
+            (roi_x + READER_SIZE, roi_y + READER_SIZE),
+            BLUE_COLOR,
+            2,
+        )
+        drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", BLUE_COLOR)
+        roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
+        current_time = time.time()
+        if (current_time - last_scan_time) > SCAN_COOLDOWN:
+            token, points, _ = qr.detectAndDecode(roi_frame)
+            if points is not None and cv2.contourArea(points) > 0:
+                if token:
+                    pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
+                    if (
+                        token != last_token
+                        or (current_time - last_scan_time) > SCAN_COOLDOWN
+                    ):
+                        time.sleep(0.5)
+                        scan_time = int(current_time)
+                        qr_data = QR_Data(
+                            token, LOCATION, checkin_checkout_toggle, scan_time
+                        )
+                        arranged_data = qr_data.get_data()
+                        qr_data.write_data()
+                        client.publish(MQTT_TOPIC, arranged_data)
+                        cv2.polylines(
+                            frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
+                        )
+                        x, y = pts[0][0]
+                        drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
+                        last_token = token
+                        last_scan_time = current_time
+                    else:
+                        # รอ cooldown
+                        cv2.polylines(
+                            frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2
+                        )
+                        x, y = pts[0][0]
+                        drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
+
+            cv2.imshow(CV2_FRAME, frame)
+            key = cv2.waitKey(1) & 0xFF
+            if (
+                key == ord("q")
+                or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
+            ):
+                print("QR Code Reader is shutting down...")
+                break
+            elif key == ord(" "):
+                checkin_checkout_toggle = 1 - checkin_checkout_toggle
+            else:
+                print(
+                    "press spacebar to toggle checkin/checkout, press q to quit, status",
+                    checkin_checkout_toggle,
+                )
+except KeyboardInterrupt:
+    print("QR Code Reader is shutting down...")
 
 cap.release()
 cv2.destroyAllWindows()
