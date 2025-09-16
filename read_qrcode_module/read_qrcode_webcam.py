@@ -28,7 +28,7 @@ last_token = None
 last_scan_time = 0
 checkin_checkout_toggle = 1  # 1 check-in 0 check-out
 
-client = mqtt.Client(callback_api_version=2, client_id=f"scanner-{LOCATION}")
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{LOCATION}")
 try:
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()

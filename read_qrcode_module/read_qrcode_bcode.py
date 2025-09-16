@@ -31,7 +31,9 @@ def toggle_mode():
 keyboard.add_hotkey("space", toggle_mode)
 
 
-client = mqtt.Client(callback_api_version=2, client_id=f"scanner-{DEVICE_LOCATION}")
+client = mqtt.Client(
+    mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{DEVICE_LOCATION}"
+)
 try:
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
