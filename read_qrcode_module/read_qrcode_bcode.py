@@ -26,6 +26,8 @@ checkin_checkout_toggle = 1  # 1 check-in 0 check-out
 def toggle_mode():
     global checkin_checkout_toggle
     checkin_checkout_toggle = 1 - checkin_checkout_toggle
+    current_mode = "checkin" if checkin_checkout_toggle == 1 else "checkout"
+    print(current_mode)
 
 
 keyboard.add_hotkey("space", toggle_mode)
