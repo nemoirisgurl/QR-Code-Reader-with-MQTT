@@ -5,10 +5,20 @@ import time
 import configparser
 from qr_reader import QR_Data
 
+CONFIG_FILE = "config.ini"
+CV2_FRAME = "QR Code Scanner"
+RED_COLOR = (0, 0, 255)
+GREEN_COLOR = (0, 255, 0)
+BLUE_COLOR = (255, 0, 0)
+YELLOW_COLOR = (255, 255, 0)
+last_token = None
+last_scan_time = 0
+checkin_checkout_toggle = 1  # 1 check-in 0 check-out
+
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
 try:
-    config.read("config.ini")
+    config.read(CONFIG_FILE)
     MQTT_BROKER = config.get("MQTT", "Broker")
     MQTT_PORT = config.getint("MQTT", "Port")
     MQTT_TOPIC = config.get("MQTT", "Topic")
@@ -19,14 +29,6 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-CV2_FRAME = "QR Code Scanner"
-RED_COLOR = (0, 0, 255)
-GREEN_COLOR = (0, 255, 0)
-BLUE_COLOR = (255, 0, 0)
-YELLOW_COLOR = (255, 255, 0)
-last_token = None
-last_scan_time = 0
-checkin_checkout_toggle = 1  # 1 check-in 0 check-out
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{LOCATION}")
 try:
@@ -110,11 +112,11 @@ try:
             ):
                 print("QR Code Reader is shutting down...")
                 break
-            elif key == ord(" "):
+            elif key == ord("e"):
                 checkin_checkout_toggle = 1 - checkin_checkout_toggle
             else:
                 print(
-                    "press spacebar to toggle checkin/checkout, press q to quit, status",
+                    "press e to toggle checkin/checkout, press q to quit, status",
                     checkin_checkout_toggle,
                 )
 except KeyboardInterrupt:

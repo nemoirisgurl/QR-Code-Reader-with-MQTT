@@ -4,10 +4,16 @@ import configparser
 import keyboard
 from qr_reader import QR_Data
 
+CONFIG_FILE = "config.ini"
+last_token = None
+last_scan_time = 0
+checkin_checkout_toggle = 1  # 1 check-in 0 check-out
+
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
+
 try:
-    config.read("config.ini")
+    config.read(CONFIG_FILE)
     MQTT_BROKER = config.get("MQTT", "Broker")
     MQTT_PORT = config.getint("MQTT", "Port")
     MQTT_TOPIC = config.get("MQTT", "Topic")
@@ -16,10 +22,6 @@ try:
 except Exception as e:
     print(f"Configure file error: {e}")
     exit()
-
-last_token = None
-last_scan_time = 0
-checkin_checkout_toggle = 1  # 1 check-in 0 check-out
 
 
 # สลับโหมด check-in กับ check-out
@@ -30,7 +32,7 @@ def toggle_mode():
     print(current_mode)
 
 
-keyboard.add_hotkey("space", toggle_mode)
+keyboard.add_hotkey("e", toggle_mode)
 
 
 client = mqtt.Client(
@@ -64,7 +66,7 @@ try:
                     # รอ cooldown
                     print("Duplicate token.")
         print(
-            "press spacebar to toggle checkin/checkout, press ctrl+c to quit, status",
+            "press e to toggle checkin/checkout, press ctrl+c to quit, status",
             checkin_checkout_toggle,
         )
 except KeyboardInterrupt:
