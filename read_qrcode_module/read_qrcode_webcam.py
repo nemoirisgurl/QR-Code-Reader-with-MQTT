@@ -82,10 +82,12 @@ try:
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
             token, points, _ = qr.detectAndDecode(roi_frame)
             if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
+                timestamp = int(current_time)
+                status = -1
+                qr_data = QR_Data(token, LOCATION, status, timestamp)
                 if token in scan_history:
                     last_scan_time = scan_history[token]
                     time_diff = current_time - last_scan_time
-                    status = -1
                     if time_diff < SCAN_COOLDOWN:
                         message_span = "Wait..."
                     elif time_diff > checkin_checkout_duration:
@@ -99,12 +101,13 @@ try:
                 else:
                     status = 1
                     scan_history[token] = current_time
-                    message_span = "Rechecked in"
+                    message_span = "Checked in"
+
                 if status >= 0:
-                    timestamp = int(current_time)
-                    qr_data = QR_Data(token, LOCATION, status, timestamp)
-                    arranged_data = qr_data.write_data()
+                    qr_data.set_status(status)
+                    arranged_data = qr_data.get_data()
                     print(qr_data.get_data())
+                    print(scan_history)
                     client.publish(MQTT_TOPIC, arranged_data)
                     time.sleep(send_interval)
 

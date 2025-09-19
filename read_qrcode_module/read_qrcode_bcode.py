@@ -1,13 +1,14 @@
 import paho.mqtt.client as mqtt
 import time
 import configparser
-import keyboard
 from qr_reader import QR_Data
 
 CONFIG_FILE = "config.ini"
-last_token = None
-last_scan_time = 0
-checkin_checkout_toggle = 1  # 1 check-in 0 check-out
+scan_history = {}
+checkin_checkout_duration = 300
+send_interval = 2
+message_span = ""
+message_expiry_time = 0
 
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
@@ -24,17 +25,6 @@ except Exception as e:
     exit()
 
 
-# สลับโหมด check-in กับ check-out
-def toggle_mode():
-    global checkin_checkout_toggle
-    checkin_checkout_toggle = 1 - checkin_checkout_toggle
-    current_mode = "checkin" if checkin_checkout_toggle == 1 else "checkout"
-    print(current_mode)
-
-
-keyboard.add_hotkey("e", toggle_mode)
-
-
 client = mqtt.Client(
     mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{DEVICE_LOCATION}"
 )
@@ -49,26 +39,39 @@ except Exception as e:
 try:
     while True:
         current_time = time.time()
-        if (current_time - last_scan_time) > SCAN_COOLDOWN:
+        if current_time > message_expiry_time:
+            message_span = ""
             token = input()
-            if token:
-                if token != last_token:
-                    last_token = token
-                    last_scan_time = current_time
-                    timestamp = int(current_time)
-                    qr_data = QR_Data(
-                        token, DEVICE_LOCATION, checkin_checkout_toggle, timestamp
-                    )
-                    arranged_data = qr_data.get_data()
-                    qr_data.write_data()
-                    client.publish(MQTT_TOPIC, arranged_data)
+            if len(token) == 22:
+                timestamp = int(current_time)
+                status = -1
+                qr_data = QR_Data(token, DEVICE_LOCATION, status, timestamp)
+                if token in scan_history:
+                    last_scan_time = scan_history[token]
+                    time_diff = current_time - last_scan_time
+                    if time_diff < SCAN_COOLDOWN:
+                        message_span = "Wait..."
+                    elif time_diff > checkin_checkout_duration:
+                        status = 0
+                        del scan_history[token]
+                        message_span = "Checked out"
+                    else:
+                        status = 1
+                        scan_history[token] = current_time
+                        message_span = "Rechecked in"
                 else:
-                    # รอ cooldown
-                    print("Duplicate token.")
-        print(
-            "press e to toggle checkin/checkout, press ctrl+c to quit, status",
-            checkin_checkout_toggle,
-        )
+                    status = 1
+                    scan_history[token] = current_time
+                    message_span = "Checked in"
+
+                if status >= 0:
+                    qr_data.set_status(status)
+                    arranged_data = qr_data.get_data()
+                    print(qr_data.get_data())
+                    print(scan_history)
+                    client.publish(MQTT_TOPIC, arranged_data)
+                    time.sleep(send_interval)
+
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
 
