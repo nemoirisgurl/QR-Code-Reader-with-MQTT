@@ -1,9 +1,9 @@
 import cv2
-import numpy as np
 import paho.mqtt.client as mqtt
 import time
 import configparser
 from qr_reader import QR_Data
+from camera import Camera
 
 CONFIG_FILE = "config.ini"
 CV2_FRAME = "QR Code Scanner"
@@ -11,9 +11,11 @@ RED_COLOR = (0, 0, 255)
 GREEN_COLOR = (0, 255, 0)
 BLUE_COLOR = (255, 0, 0)
 YELLOW_COLOR = (255, 255, 0)
-last_token = None
-last_scan_time = 0
-checkin_checkout_toggle = 1  # 1 check-in 0 check-out
+WHITE_COLOR = (255, 255, 255)
+checkin_checkout_duration = 300
+send_interval = 2
+message_span = ""
+message_expiry_time = 0
 
 # อ่านไฟล์ config.ini
 config = configparser.ConfigParser()
@@ -42,86 +44,85 @@ except Exception as e:
 
 def drawText(frame, x, y, text, color=GREEN_COLOR):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.75
+    font_scale = 0.8
     thickness = 2
     cv2.putText(frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
 
 
-cap = cv2.VideoCapture(0)  # เปลี่ยน /dev/video*
+cap = Camera()
 qr = cv2.QRCodeDetector()
 
-cv2.namedWindow(CV2_FRAME)
+scan_history = {}
+
+cv2.namedWindow(CV2_FRAME, cv2.WINDOW_NORMAL)
+cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
 try:
     while True:
-        ret, frame = cap.read()
+        ret, frame = cap.get_frame()
         if not ret:
-            break
+            continue
+        if (
+            cv2.waitKey(1) & 0xFF == ord("q")
+            or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
+        ):
+            exit()
 
         # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
         frame_h, frame_w, _ = frame.shape
         roi_x = int((frame_w - READER_SIZE) / 2)
         roi_y = int((frame_h - READER_SIZE) / 2)
 
+        current_time = time.time()
+        if current_time > message_expiry_time:
+            message_span = ""
+            reader_frame = frame[
+                roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
+            ]
+            roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
+            token, points, _ = qr.detectAndDecode(roi_frame)
+            if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
+                if token in scan_history:
+                    last_scan_time = scan_history[token]
+                    time_diff = current_time - last_scan_time
+                    status = -1
+                    if time_diff < SCAN_COOLDOWN:
+                        message_span = "Wait..."
+                    elif time_diff > checkin_checkout_duration:
+                        status = 0
+                        del scan_history[token]
+                        message_span = "Checked out"
+                    else:
+                        status = 1
+                        scan_history[token] = current_time
+                        message_span = "Rechecked in"
+                else:
+                    status = 1
+                    scan_history[token] = current_time
+                    message_span = "Rechecked in"
+                if status >= 0:
+                    timestamp = int(current_time)
+                    qr_data = QR_Data(token, LOCATION, status, timestamp)
+                    arranged_data = qr_data.write_data()
+                    print(qr_data.get_data())
+                    client.publish(MQTT_TOPIC, arranged_data)
+                    time.sleep(send_interval)
+
+        if message_span:
+            drawText(frame, roi_x, roi_y - 10, message_span, WHITE_COLOR)
+        else:
+            drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
         cv2.rectangle(
             frame,
             (roi_x, roi_y),
             (roi_x + READER_SIZE, roi_y + READER_SIZE),
-            BLUE_COLOR,
-            2,
+            (255, 255, 255),
+            3,
         )
-        drawText(frame, roi_x, roi_y - 10, "Place QR Code Here", BLUE_COLOR)
-        roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
-        current_time = time.time()
-        if (current_time - last_scan_time) > SCAN_COOLDOWN:
-            token, points, _ = qr.detectAndDecode(roi_frame)
-            if points is not None and cv2.contourArea(points) > 0:
-                if token:
-                    pts = np.int32(points + (roi_x, roi_y)).reshape((-1, 1, 2))
-                    if (
-                        token != last_token
-                        or (current_time - last_scan_time) > SCAN_COOLDOWN
-                    ):
-                        time.sleep(0.5)
-                        scan_time = int(current_time)
-                        qr_data = QR_Data(
-                            token, LOCATION, checkin_checkout_toggle, scan_time
-                        )
-                        arranged_data = qr_data.get_data()
-                        qr_data.write_data()
-                        client.publish(MQTT_TOPIC, arranged_data)
-                        cv2.polylines(
-                            frame, [pts], isClosed=True, color=GREEN_COLOR, thickness=2
-                        )
-                        x, y = pts[0][0]
-                        drawText(frame, x, y - 10, "Scanned", GREEN_COLOR)
-                        last_token = token
-                        last_scan_time = current_time
-                    else:
-                        # รอ cooldown
-                        cv2.polylines(
-                            frame, [pts], isClosed=True, color=YELLOW_COLOR, thickness=2
-                        )
-                        x, y = pts[0][0]
-                        drawText(frame, x, y - 10, "Wait...", YELLOW_COLOR)
+        cv2.imshow(CV2_FRAME, frame)
 
-            cv2.imshow(CV2_FRAME, frame)
-            key = cv2.waitKey(1) & 0xFF
-            if (
-                key == ord("q")
-                or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
-            ):
-                print("QR Code Reader is shutting down...")
-                break
-            elif key == ord("e"):
-                checkin_checkout_toggle = 1 - checkin_checkout_toggle
-            else:
-                print(
-                    "press e to toggle checkin/checkout, press q to quit, status",
-                    checkin_checkout_toggle,
-                )
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
-
 cap.release()
 cv2.destroyAllWindows()
 client.loop_stop()
