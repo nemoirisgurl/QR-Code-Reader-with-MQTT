@@ -1,10 +1,11 @@
 import paho.mqtt.client as mqtt
 import time
 import configparser
+import os
+import json
 from qr_reader import QR_Data
 
 CONFIG_FILE = "config.ini"
-scan_history = {}
 checkin_checkout_duration = 300
 send_interval = 2
 message_span = ""
@@ -35,6 +36,28 @@ try:
 except Exception as e:
     print(f"Failed to connect broker: {e}")
     exit()
+
+
+def load_data():
+    if not os.path.exists("qr_log.json") or os.path.getsize("qr_log.json") == 0:
+        print("QR Log created")
+        return {}
+    try:
+        with open("qr_log.json", "r", encoding="UTF-8") as log_file:
+            history = {}
+            all_logs = json.load(log_file)
+            for log in reversed(all_logs):
+                token = log.get("token")
+                timestamp = log.get("timestamp")
+                if token and timestamp and token not in history:
+                    if log.get("status") == 1:
+                        history[token] = timestamp
+    except Exception as e:
+        print(f"Log file error: {e}")
+    return history
+
+
+scan_history = load_data()
 
 try:
     while True:
@@ -67,7 +90,7 @@ try:
                 if status >= 0:
                     qr_data.set_status(status)
                     arranged_data = qr_data.get_data()
-                    print(qr_data.get_data())
+                    qr_data.write_data()
                     print(scan_history)
                     client.publish(MQTT_TOPIC, arranged_data)
                     time.sleep(send_interval)

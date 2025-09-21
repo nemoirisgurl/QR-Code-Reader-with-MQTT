@@ -2,6 +2,8 @@ import cv2
 import paho.mqtt.client as mqtt
 import time
 import configparser
+import os
+import json
 from qr_reader import QR_Data
 from camera import Camera
 
@@ -49,10 +51,29 @@ def drawText(frame, x, y, text, color=GREEN_COLOR):
     cv2.putText(frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
 
 
+def load_data():
+    if not os.path.exists("qr_log.json") or os.path.getsize("qr_log.json") == 0:
+        print("QR Log created")
+        return {}
+    try:
+        with open("qr_log.json", "r", encoding="UTF-8") as log_file:
+            history = {}
+            all_logs = json.load(log_file)
+            for log in reversed(all_logs):
+                token = log.get("token")
+                timestamp = log.get("timestamp")
+                if token and timestamp and token not in history:
+                    if log.get("status") == 1:
+                        history[token] = timestamp
+    except Exception as e:
+        print(f"Log file error: {e}")
+    return history
+
+
 cap = Camera()
 qr = cv2.QRCodeDetector()
 
-scan_history = {}
+scan_history = load_data()
 
 cv2.namedWindow(CV2_FRAME, cv2.WINDOW_NORMAL)
 cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -66,6 +87,7 @@ try:
             cv2.waitKey(1) & 0xFF == ord("q")
             or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
         ):
+            print("QR Code Reading is shutting down.")
             exit()
 
         # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
@@ -81,7 +103,7 @@ try:
             ]
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
             token, points, _ = qr.detectAndDecode(roi_frame)
-            if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
+            if points is not None and cv2.contourArea(points) > 0 and token:
                 timestamp = int(current_time)
                 status = -1
                 qr_data = QR_Data(token, LOCATION, status, timestamp)
@@ -106,7 +128,7 @@ try:
                 if status >= 0:
                     qr_data.set_status(status)
                     arranged_data = qr_data.get_data()
-                    print(qr_data.get_data())
+                    qr_data.write_data()
                     print(scan_history)
                     client.publish(MQTT_TOPIC, arranged_data)
                     time.sleep(send_interval)
