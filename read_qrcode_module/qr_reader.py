@@ -15,12 +15,14 @@ class QR_Data:
         return f"{self.token},{self.location},{self.status},{self.timestamp}"
 
     def compress_data(self):
-        return {
-            "token": self.token,
-            "location": self.location,
-            "status": self.status,
-            "timestamp": self.timestamp,
-        }
+        if len(self.token) == 22:
+            return {
+                "token": self.token,
+                "location": self.location,
+                "status": self.status,
+                "timestamp": self.timestamp,
+            }
+        return {}
 
     def set_status(self, status):
         self.status = status
@@ -37,7 +39,7 @@ class QR_Data:
                 json.dump(all_logs, log_file, indent=4, ensure_ascii=False)
         except json.JSONDecodeError:
             with open(self.qr_log, "w", encoding="UTF-8") as log_file:
-                json.dump(list(qr_obj), log_file, indent=4, ensure_ascii=False)
+                json.dump([qr_obj], log_file, indent=4, ensure_ascii=False)
 
         except Exception as e:
             print(f"Log file error: {e}")

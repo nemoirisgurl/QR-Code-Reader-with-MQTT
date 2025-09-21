@@ -103,7 +103,7 @@ try:
             ]
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
             token, points, _ = qr.detectAndDecode(roi_frame)
-            if points is not None and cv2.contourArea(points) > 0 and token:
+            if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
                 timestamp = int(current_time)
                 status = -1
                 qr_data = QR_Data(token, LOCATION, status, timestamp)
