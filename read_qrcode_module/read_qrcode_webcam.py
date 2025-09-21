@@ -4,8 +4,9 @@ import time
 import configparser
 import os
 import json
-from qr_reader import QR_Data
+from qr_reader import QRData
 from camera import Camera
+from reader_logic import ReaderLogic
 
 CONFIG_FILE = "config.ini"
 CV2_FRAME = "QR Code Scanner"
@@ -51,29 +52,11 @@ def drawText(frame, x, y, text, color=GREEN_COLOR):
     cv2.putText(frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
 
 
-def load_data():
-    if not os.path.exists("qr_log.json") or os.path.getsize("qr_log.json") == 0:
-        print("QR Log created")
-        return {}
-    try:
-        with open("qr_log.json", "r", encoding="UTF-8") as log_file:
-            history = {}
-            all_logs = json.load(log_file)
-            for log in reversed(all_logs):
-                token = log.get("token")
-                timestamp = log.get("timestamp")
-                if token and timestamp and token not in history:
-                    if log.get("status") == 1:
-                        history[token] = timestamp
-    except Exception as e:
-        print(f"Log file error: {e}")
-    return history
-
-
 cap = Camera()
 qr = cv2.QRCodeDetector()
+qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
 
-scan_history = load_data()
+scan_history = qr_reader.scan_history
 
 cv2.namedWindow(CV2_FRAME, cv2.WINDOW_NORMAL)
 cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -104,39 +87,27 @@ try:
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
             token, points, _ = qr.detectAndDecode(roi_frame)
             if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
-                timestamp = int(current_time)
-                status = -1
-                qr_data = QR_Data(token, LOCATION, status, timestamp)
-                if token in scan_history:
-                    last_scan_time = scan_history[token]
-                    time_diff = current_time - last_scan_time
-                    if time_diff < SCAN_COOLDOWN:
-                        message_span = "Wait..."
-                    elif time_diff > checkin_checkout_duration:
-                        status = 0
-                        del scan_history[token]
-                        message_span = "Checked out"
-                    else:
-                        status = 1
-                        scan_history[token] = current_time
-                        message_span = "Rechecked in"
-                else:
-                    status = 1
-                    scan_history[token] = current_time
-                    message_span = "Checked in"
-
-                if status >= 0:
-                    qr_data.set_status(status)
-                    arranged_data = qr_data.get_data()
-                    qr_data.write_data()
-                    print(scan_history)
+                result = qr_reader.read_qr(token)
+                if result and result["qr_data"]:
+                    message_span = result["message"]
+                    match (result["status"]):
+                        case 0:
+                            message_color = RED_COLOR
+                            break
+                        case 1:
+                            message_color = GREEN_COLOR
+                            break
+                        case _:
+                            message_color = WHITE_COLOR
+                    drawText(frame, roi_x, roi_y - 10, message_span, message_color)
+                    qr_data = QRData(
+                        token, LOCATION, result["status"], int(time.time())
+                    )
+                    arranged_data = qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
-                    time.sleep(send_interval)
-
-        if message_span:
-            drawText(frame, roi_x, roi_y - 10, message_span, WHITE_COLOR)
-        else:
-            drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
+                    print(result["message"])
+                message_expiry_time = time.time() + send_interval
+        drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
         cv2.rectangle(
             frame,
             (roi_x, roi_y),

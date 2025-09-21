@@ -3,7 +3,9 @@ import time
 import configparser
 import os
 import json
-from qr_reader import QR_Data
+from qr_reader import QRData
+from reader_logic import ReaderLogic
+
 
 CONFIG_FILE = "config.ini"
 checkin_checkout_duration = 300
@@ -38,26 +40,8 @@ except Exception as e:
     exit()
 
 
-def load_data():
-    if not os.path.exists("qr_log.json") or os.path.getsize("qr_log.json") == 0:
-        print("QR Log created")
-        return {}
-    try:
-        with open("qr_log.json", "r", encoding="UTF-8") as log_file:
-            history = {}
-            all_logs = json.load(log_file)
-            for log in reversed(all_logs):
-                token = log.get("token")
-                timestamp = log.get("timestamp")
-                if token and timestamp and token not in history:
-                    if log.get("status") == 1:
-                        history[token] = timestamp
-    except Exception as e:
-        print(f"Log file error: {e}")
-    return history
-
-
-scan_history = load_data()
+qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
+scan_history = qr_reader.scan_history
 
 try:
     while True:
@@ -66,34 +50,16 @@ try:
             message_span = ""
             token = input()
             if len(token) == 22:
-                timestamp = int(current_time)
-                status = -1
-                qr_data = QR_Data(token, DEVICE_LOCATION, status, timestamp)
-                if token in scan_history:
-                    last_scan_time = scan_history[token]
-                    time_diff = current_time - last_scan_time
-                    if time_diff < SCAN_COOLDOWN:
-                        message_span = "Wait..."
-                    elif time_diff > checkin_checkout_duration:
-                        status = 0
-                        del scan_history[token]
-                        message_span = "Checked out"
-                    else:
-                        status = 1
-                        scan_history[token] = current_time
-                        message_span = "Rechecked in"
-                else:
-                    status = 1
-                    scan_history[token] = current_time
-                    message_span = "Checked in"
-
-                if status >= 0:
-                    qr_data.set_status(status)
-                    arranged_data = qr_data.get_data()
-                    qr_data.write_data()
-                    print(scan_history)
+                result = qr_reader.read_qr(token)
+                if result["qr_data"]:
+                    qr_data = QRData(
+                        token, DEVICE_LOCATION, result["status"], int(time.time())
+                    )
+                    arranged_data = qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
-                    time.sleep(send_interval)
+                    print(result["message"])
+                message_expiry_time = time.time() + send_interval
+
 
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")

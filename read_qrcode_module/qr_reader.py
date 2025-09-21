@@ -3,7 +3,7 @@ import json
 import os
 
 
-class QR_Data:
+class QRData:
     def __init__(self, token, location, status, timestamp=int):
         self.token = token
         self.location = location
@@ -14,7 +14,7 @@ class QR_Data:
     def get_data(self):
         return f"{self.token},{self.location},{self.status},{self.timestamp}"
 
-    def compress_data(self):
+    def compress_data(self) -> dict:
         if len(self.token) == 22:
             return {
                 "token": self.token,
