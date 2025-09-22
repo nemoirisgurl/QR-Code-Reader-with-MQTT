@@ -55,7 +55,8 @@ try:
                     qr_data = QRData(
                         token, DEVICE_LOCATION, result["status"], int(time.time())
                     )
-                    arranged_data = qr_data.write_data()
+                    arranged_data = qr_data.get_data()
+                    qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
                     print(result["message"])
                 message_expiry_time = time.time() + send_interval

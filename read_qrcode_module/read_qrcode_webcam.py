@@ -52,6 +52,16 @@ def drawText(frame, x, y, text, color=GREEN_COLOR):
     cv2.putText(frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
 
 
+def showResult(color):
+    cv2.rectangle(
+        frame,
+        (roi_x, roi_y),
+        (roi_x + READER_SIZE, roi_y + READER_SIZE),
+        color,
+        3,
+    )
+
+
 cap = Camera()
 qr = cv2.QRCodeDetector()
 qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
@@ -93,17 +103,21 @@ try:
                     match (result["status"]):
                         case 0:
                             message_color = RED_COLOR
+                            showResult(message_color)
                             break
                         case 1:
                             message_color = GREEN_COLOR
+                            showResult(message_color)
                             break
                         case _:
                             message_color = WHITE_COLOR
+                            showResult(message_color)
                     drawText(frame, roi_x, roi_y - 10, message_span, message_color)
                     qr_data = QRData(
                         token, LOCATION, result["status"], int(time.time())
                     )
-                    arranged_data = qr_data.write_data()
+                    arranged_data = qr_data.get_data()
+                    qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
                     print(result["message"])
                 message_expiry_time = time.time() + send_interval
