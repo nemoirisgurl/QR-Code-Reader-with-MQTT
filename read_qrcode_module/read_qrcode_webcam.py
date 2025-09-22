@@ -2,8 +2,6 @@ import cv2
 import paho.mqtt.client as mqtt
 import time
 import configparser
-import os
-import json
 from qr_reader import QRData
 from camera import Camera
 from reader_logic import ReaderLogic
@@ -103,16 +101,10 @@ try:
                     match (result["status"]):
                         case 0:
                             message_color = RED_COLOR
-                            showResult(message_color)
-                            break
                         case 1:
                             message_color = GREEN_COLOR
-                            showResult(message_color)
-                            break
                         case _:
                             message_color = WHITE_COLOR
-                            showResult(message_color)
-                    drawText(frame, roi_x, roi_y - 10, message_span, message_color)
                     qr_data = QRData(
                         token, LOCATION, result["status"], int(time.time())
                     )
@@ -120,7 +112,10 @@ try:
                     qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
                     print(result["message"])
-                message_expiry_time = time.time() + send_interval
+                    showResult(message_color)
+                    drawText(frame, roi_x, roi_y - 50, message_span, message_color)
+                time.sleep(send_interval)
+                message_expiry_time = time.time()
         drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
         cv2.rectangle(
             frame,
