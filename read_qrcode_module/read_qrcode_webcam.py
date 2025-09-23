@@ -94,37 +94,37 @@ try:
             ]
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
             token, points, _ = qr.detectAndDecode(roi_frame)
-            if points is not None and cv2.contourArea(points) > 0 and len(token) == 22:
-                result = qr_reader.read_qr(token)
-                if result and result["qr_data"]:
-                    message_span = result["message"]
-                    match (result["status"]):
-                        case 0:
-                            message_color = RED_COLOR
-                        case 1:
-                            message_color = GREEN_COLOR
-                        case _:
-                            message_color = WHITE_COLOR
-                    qr_data = QRData(
-                        token, LOCATION, result["status"], int(time.time())
-                    )
-                    arranged_data = qr_data.get_data()
-                    qr_data.write_data()
-                    client.publish(MQTT_TOPIC, arranged_data)
-                    print(result["message"])
-                    showResult(message_color)
-                    drawText(frame, roi_x, roi_y - 50, message_span, message_color)
-                time.sleep(send_interval)
-                message_expiry_time = time.time()
-        drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
-        cv2.rectangle(
-            frame,
-            (roi_x, roi_y),
-            (roi_x + READER_SIZE, roi_y + READER_SIZE),
-            (255, 255, 255),
-            3,
-        )
-        cv2.imshow(CV2_FRAME, frame)
+            if token and points is not None and len(points) > 0:
+                if cv2.contourArea(points) > 0 and len(token) == 22:
+                    result = qr_reader.read_qr(token)
+                    if result and result["qr_data"]:
+                        message_span = result["message"]
+                        match (result["status"]):
+                            case 0:
+                                message_color = RED_COLOR
+                            case 1:
+                                message_color = GREEN_COLOR
+                            case _:
+                                message_color = WHITE_COLOR
+                        qr_data = QRData(
+                            token, LOCATION, result["status"], int(time.time())
+                        )
+                        arranged_data = qr_data.get_data()
+                        qr_data.write_data()
+                        client.publish(MQTT_TOPIC, arranged_data)
+                        print(result["message"])
+                        showResult(message_color)
+                        drawText(frame, roi_x, roi_y - 50, message_span, message_color)
+                    message_expiry_time = time.time() + send_interval
+            drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
+            cv2.rectangle(
+                frame,
+                (roi_x, roi_y),
+                (roi_x + READER_SIZE, roi_y + READER_SIZE),
+                (255, 255, 255),
+                3,
+            )
+            cv2.imshow(CV2_FRAME, frame)
 
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
