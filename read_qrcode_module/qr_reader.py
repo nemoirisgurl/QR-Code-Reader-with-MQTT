@@ -19,8 +19,8 @@ class QRData:
             return {
                 "token": self.token,
                 "location": self.location,
-                "status": self.status,
-                "timestamp": self.timestamp,
+                "check": self.status,
+                "epoch": self.timestamp,
             }
         return {}
 

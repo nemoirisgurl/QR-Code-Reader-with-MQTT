@@ -21,9 +21,9 @@ class ReaderLogic:
                 all_logs = json.load(log_file)
                 for log in reversed(all_logs):
                     token = log.get("token")
-                    timestamp = log.get("timestamp")
+                    timestamp = log.get("epoch")
                     if token and timestamp and token not in history:
-                        if log.get("status") == 1:
+                        if log.get("check") == 1:
                             history[token] = timestamp
         except Exception as e:
             print(f"Log file error: {e}")
