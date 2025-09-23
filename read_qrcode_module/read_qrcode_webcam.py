@@ -14,7 +14,7 @@ BLUE_COLOR = (255, 0, 0)
 YELLOW_COLOR = (255, 255, 0)
 WHITE_COLOR = (255, 255, 255)
 checkin_checkout_duration = 300
-send_interval = 2
+send_interval = 1
 message_span = ""
 message_expiry_time = 0
 
