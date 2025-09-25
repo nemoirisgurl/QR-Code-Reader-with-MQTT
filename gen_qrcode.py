@@ -16,7 +16,7 @@ class QRGen:
             :length
         ]
 
-    def generate_qrcode(self, data, filename="qrcode.png"):
+    def generate_qrcode(self, data, filename=("qrcode.png")):
         self.qr.add_data(data)
         self.qr.make(fit=True)
         img = self.qr.make_image(fill_color="black", back_color="white")
