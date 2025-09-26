@@ -2,9 +2,11 @@ import cv2
 import paho.mqtt.client as mqtt
 import time
 import configparser
+import pytz
 from qr_reader import QRData
 from camera import Camera
 from reader_logic import ReaderLogic
+from datetime import datetime
 
 CONFIG_FILE = "config.ini"
 CV2_FRAME = "QR Code Scanner"
@@ -14,7 +16,7 @@ BLUE_COLOR = (255, 0, 0)
 YELLOW_COLOR = (255, 255, 0)
 WHITE_COLOR = (255, 255, 255)
 checkin_checkout_duration = 300
-send_interval = 1
+send_interval = 2
 message_span = ""
 message_expiry_time = 0
 
@@ -114,7 +116,13 @@ try:
                         client.publish(MQTT_TOPIC, arranged_data)
                         print(result["message"])
                         showResult(message_color)
-                        drawText(frame, roi_x, roi_y - 50, message_span, message_color)
+                        drawText(
+                            frame,
+                            roi_x,
+                            roi_y - 50,
+                            f"{message_span} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}",
+                            message_color,
+                        )
                     message_expiry_time = time.time() + send_interval
             drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
             cv2.rectangle(

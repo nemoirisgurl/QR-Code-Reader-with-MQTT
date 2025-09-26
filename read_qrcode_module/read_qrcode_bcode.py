@@ -1,10 +1,10 @@
 import paho.mqtt.client as mqtt
 import time
 import configparser
-import os
-import json
+import pytz
 from qr_reader import QRData
 from reader_logic import ReaderLogic
+from datetime import datetime
 
 
 CONFIG_FILE = "config.ini"
@@ -58,7 +58,7 @@ try:
                     arranged_data = qr_data.get_data()
                     qr_data.write_data()
                     client.publish(MQTT_TOPIC, arranged_data)
-                    print(result["message"])
+                    print(f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}')
                 message_expiry_time = time.time() + send_interval
 
 
