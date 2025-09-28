@@ -1,5 +1,4 @@
 import cv2
-import paho.mqtt.client as mqtt
 import time
 import configparser
 import pytz
@@ -7,6 +6,7 @@ from qr_reader import QRData
 from camera import Camera
 from reader_logic import ReaderLogic
 from datetime import datetime
+from pyzbar.pyzbar import decode
 
 CONFIG_FILE = "config.ini"
 CV2_FRAME = "QR Code Scanner"
@@ -24,24 +24,11 @@ message_expiry_time = 0
 config = configparser.ConfigParser()
 try:
     config.read(CONFIG_FILE)
-    MQTT_BROKER = config.get("MQTT", "Broker")
-    MQTT_PORT = config.getint("MQTT", "Port")
-    MQTT_TOPIC = config.get("MQTT", "Topic")
     LOCATION = config.get("Device", "Location")
     SCAN_COOLDOWN = config.getint("Device", "ScanCooldown")
     READER_SIZE = config.getint("Device", "ReaderSize")
 except Exception as e:
     print(f"Configure file error: {e}")
-    exit()
-
-
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{LOCATION}")
-try:
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_start()
-    print("Connected to broker")
-except Exception as e:
-    print(f"Failed to connect broker: {e}")
     exit()
 
 
@@ -95,9 +82,11 @@ try:
                 roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
             ]
             roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
-            token, points, _ = qr.detectAndDecode(roi_frame)
-            if token and points is not None and len(points) > 0:
-                if cv2.contourArea(points) > 0 and len(token) == 22:
+            decoded_objects = decode(roi_frame)
+
+            for obj in decoded_objects:
+                token = obj.data.decode("utf-8")
+                if len(token) == 22:
                     result = qr_reader.read_qr(token)
                     if result and result["qr_data"]:
                         message_span = result["message"]
@@ -113,7 +102,6 @@ try:
                         )
                         arranged_data = qr_data.get_data()
                         qr_data.write_data()
-                        client.publish(MQTT_TOPIC, arranged_data)
                         print(result["message"])
                         showResult(message_color)
                         drawText(
@@ -138,5 +126,3 @@ except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
 cap.release()
 cv2.destroyAllWindows()
-client.loop_stop()
-client.disconnect()

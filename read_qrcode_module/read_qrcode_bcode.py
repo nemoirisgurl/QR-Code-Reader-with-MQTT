@@ -1,4 +1,3 @@
-import paho.mqtt.client as mqtt
 import time
 import configparser
 import pytz
@@ -18,25 +17,10 @@ config = configparser.ConfigParser()
 
 try:
     config.read(CONFIG_FILE)
-    MQTT_BROKER = config.get("MQTT", "Broker")
-    MQTT_PORT = config.getint("MQTT", "Port")
-    MQTT_TOPIC = config.get("MQTT", "Topic")
     DEVICE_LOCATION = config.get("Device", "Location")
     SCAN_COOLDOWN = config.getint("Device", "ScanCooldown")
 except Exception as e:
     print(f"Configure file error: {e}")
-    exit()
-
-
-client = mqtt.Client(
-    mqtt.CallbackAPIVersion.VERSION2, client_id=f"scanner-{DEVICE_LOCATION}"
-)
-try:
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_start()
-    print("Connected to broker")
-except Exception as e:
-    print(f"Failed to connect broker: {e}")
     exit()
 
 
@@ -57,14 +41,11 @@ try:
                     )
                     arranged_data = qr_data.get_data()
                     qr_data.write_data()
-                    client.publish(MQTT_TOPIC, arranged_data)
-                    print(f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}')
+                    print(
+                        f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
+                    )
                 message_expiry_time = time.time() + send_interval
 
 
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
-
-
-client.loop_stop()
-client.disconnect()

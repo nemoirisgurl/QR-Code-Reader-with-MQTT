@@ -52,3 +52,4 @@ class ReaderLogic:
             message = "Checked in"
         qr_data = f"{token},{self.location},{status},{timestamp}"
         return {"status": status, "message": message, "qr_data": qr_data}
+
