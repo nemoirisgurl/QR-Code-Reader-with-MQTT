@@ -19,6 +19,7 @@ class ReaderLogic:
             with open("qr_log.json", "r", encoding="UTF-8") as log_file:
                 history = {}
                 all_logs = json.load(log_file)
+                all_logs = all_logs[-800:]
                 for log in reversed(all_logs):
                     token = log.get("token")
                     timestamp = log.get("epoch")
@@ -52,4 +53,3 @@ class ReaderLogic:
             message = "Checked in"
         qr_data = f"{token},{self.location},{status},{timestamp}"
         return {"status": status, "message": message, "qr_data": qr_data}
-

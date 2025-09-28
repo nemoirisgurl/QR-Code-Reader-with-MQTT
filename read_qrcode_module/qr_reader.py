@@ -35,6 +35,9 @@ class QRData:
                 with open(self.qr_log, "r", encoding="UTF-8") as log_file:
                     all_logs = json.load(log_file)
             all_logs.append(qr_obj)
+
+            if len(all_logs) > 800:
+                all_logs = all_logs[-800:]
             with open(self.qr_log, "w", encoding="UTF-8") as log_file:
                 json.dump(all_logs, log_file, indent=4, ensure_ascii=False)
         except json.JSONDecodeError:
