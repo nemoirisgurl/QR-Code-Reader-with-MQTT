@@ -2,3 +2,6 @@ numpy
 opencv-python
 pyzbar
 pytz
+qrcode 
+Pillow 
+qrcode[pil]
