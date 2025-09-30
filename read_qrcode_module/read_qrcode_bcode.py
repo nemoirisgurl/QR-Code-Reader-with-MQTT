@@ -40,8 +40,11 @@ try:
                     qr_data = QRData(
                         token, DEVICE_LOCATION, result["status"], int(time.time())
                     )
-                    arranged_data = qr_data.get_data()
-                    ser.write((arranged_data + "\n").encode("utf-8"))
+                    ser.write(
+                        (
+                            f"{token}, {result['message']}, {result['status']}" + "\n"
+                        ).encode("utf-8")
+                    )
                     qr_data.write_data()
                     print(
                         f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'

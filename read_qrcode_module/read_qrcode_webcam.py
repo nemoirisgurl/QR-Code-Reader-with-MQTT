@@ -79,7 +79,6 @@ try:
             frame_h, frame_w, _ = frame.shape
             roi_x = int((frame_w - READER_SIZE) / 2)
             roi_y = int((frame_h - READER_SIZE) / 2)
-            
 
             current_time = time.time()
             if current_time > message_expiry_time:
@@ -109,8 +108,12 @@ try:
                                 qr_data = QRData(
                                     token, LOCATION, result["status"], int(time.time())
                                 )
-                                arranged_data = qr_data.get_data()
-                                ser.write((arranged_data + "\n").encode("utf-8"))
+                                ser.write(
+                                    (
+                                        f"{token}, {result['message']}, {result['status']}"
+                                        + "\n"
+                                    ).encode("utf-8")
+                                )
                                 qr_data.write_data()
                             print(result["message"])
                             showResult(message_color)
