@@ -100,15 +100,16 @@ try:
                         qr_data = QRData(
                             token, LOCATION, result["status"], int(time.time())
                         )
-                        arranged_data = qr_data.get_data()
-                        qr_data.write_data()
+                        if result["status"] != -1:
+                            arranged_data = qr_data.get_data()
+                            qr_data.write_data()
                         print(result["message"])
                         showResult(message_color)
                         drawText(
                             frame,
                             roi_x,
                             roi_y - 50,
-                            f"{message_span} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}",
+                            f"{message_span} at: {datetime.now(pytz.timezone('Asia/Bangkok')).strftime('%H:%M:%S')}",
                             message_color,
                         )
                     message_expiry_time = time.time() + send_interval

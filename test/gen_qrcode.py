@@ -2,7 +2,6 @@ import qrcode
 import PIL
 import secrets
 import base64
-from PIL import Image, ImageDraw
 
 
 class QRGen:
