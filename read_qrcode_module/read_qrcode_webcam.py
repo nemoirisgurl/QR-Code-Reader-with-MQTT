@@ -60,67 +60,77 @@ cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 try:
     while True:
-        ret, frame = cap.get_frame()
-        if not ret:
-            continue
-        if (
-            cv2.waitKey(1) & 0xFF == ord("q")
-            or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
-        ):
-            print("QR Code Reading is shutting down.")
-            exit()
+        try:
+            ret, frame = cap.get_frame()
+            if not ret:
+                cap = Camera()
+                continue
+            if (
+                cv2.waitKey(1) & 0xFF == ord("q")
+                or cv2.getWindowProperty(CV2_FRAME, cv2.WND_PROP_VISIBLE) < 1
+            ):
+                print("QR Code Reading is shutting down.")
+                exit()
 
-        # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
-        frame_h, frame_w, _ = frame.shape
-        roi_x = int((frame_w - READER_SIZE) / 2)
-        roi_y = int((frame_h - READER_SIZE) / 2)
+            # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
+            frame_h, frame_w, _ = frame.shape
+            roi_x = int((frame_w - READER_SIZE) / 2)
+            roi_y = int((frame_h - READER_SIZE) / 2)
 
-        current_time = time.time()
-        if current_time > message_expiry_time:
-            message_span = ""
-            reader_frame = frame[
-                roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
-            ]
-            roi_frame = frame[roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE]
-            decoded_objects = decode(roi_frame)
+            current_time = time.time()
+            if current_time > message_expiry_time:
+                message_span = ""
+                reader_frame = frame[
+                    roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
+                ]
+                roi_frame = frame[
+                    roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
+                ]
+                decoded_objects = decode(roi_frame)
 
-            for obj in decoded_objects:
-                token = obj.data.decode("utf-8")
-                if len(token) == 22:
-                    result = qr_reader.read_qr(token)
-                    if result and result["qr_data"]:
-                        message_span = result["message"]
-                        match (result["status"]):
-                            case 0:
-                                message_color = RED_COLOR
-                            case 1:
-                                message_color = GREEN_COLOR
-                            case _:
-                                message_color = WHITE_COLOR
-                        qr_data = QRData(
-                            token, LOCATION, result["status"], int(time.time())
-                        )
-                        arranged_data = qr_data.get_data()
-                        qr_data.write_data()
-                        print(result["message"])
-                        showResult(message_color)
-                        drawText(
-                            frame,
-                            roi_x,
-                            roi_y - 50,
-                            f"{message_span} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}",
-                            message_color,
-                        )
-                    message_expiry_time = time.time() + send_interval
-            drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
-            cv2.rectangle(
-                frame,
-                (roi_x, roi_y),
-                (roi_x + READER_SIZE, roi_y + READER_SIZE),
-                (255, 255, 255),
-                3,
+                for obj in decoded_objects:
+                    token = obj.data.decode("utf-8")
+                    if len(token) == 22:
+                        result = qr_reader.read_qr(token)
+                        if result and result["qr_data"]:
+                            message_span = result["message"]
+                            match (result["status"]):
+                                case 0:
+                                    message_color = RED_COLOR
+                                case 1:
+                                    message_color = GREEN_COLOR
+                                case _:
+                                    message_color = WHITE_COLOR
+                            qr_data = QRData(
+                                token, LOCATION, result["status"], int(time.time())
+                            )
+                            arranged_data = qr_data.get_data()
+                            qr_data.write_data()
+                            print(result["message"])
+                            showResult(message_color)
+                            drawText(
+                                frame,
+                                roi_x,
+                                roi_y - 50,
+                                f"{message_span} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}",
+                                message_color,
+                            )
+                        message_expiry_time = time.time() + send_interval
+                drawText(frame, roi_x, roi_y - 10, "Place QR Code here", BLUE_COLOR)
+                cv2.rectangle(
+                    frame,
+                    (roi_x, roi_y),
+                    (roi_x + READER_SIZE, roi_y + READER_SIZE),
+                    (255, 255, 255),
+                    3,
+                )
+                cv2.imshow(CV2_FRAME, frame)
+
+        except Exception as e:
+            print(
+                f"Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}"
             )
-            cv2.imshow(CV2_FRAME, frame)
+            continue
 
 except KeyboardInterrupt:
     print("QR Code Reader is shutting down...")
