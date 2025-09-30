@@ -36,7 +36,7 @@ try:
             token = input()
             if len(token) == 22:
                 result = qr_reader.read_qr(token)
-                if result["qr_data"]:
+                if result["qr_data"] and result["status"] != -1:
                     qr_data = QRData(
                         token, DEVICE_LOCATION, result["status"], int(time.time())
                     )
