@@ -104,12 +104,17 @@ try:
                                     message_color = GREEN_COLOR
                                 case _:
                                     message_color = WHITE_COLOR
-                            qr_data = QRData(
-                                token, LOCATION, result["status"], int(time.time())
-                            )
-                            arranged_data = qr_data.get_data()
-                            ser.write((arranged_data + "\n").encode("utf-8"))
-                            qr_data.write_data()
+                            if result["status"] != -1:
+                                qr_data = QRData(
+                                    token, LOCATION, result["status"], int(time.time())
+                                )
+                                ser.write(
+                                    (
+                                        f"{token}, {result['message']}, {result['status']}"
+                                        + "\n"
+                                    ).encode("utf-8")
+                                )
+                                qr_data.write_data()
                             print(result["message"])
                             showResult(message_color)
                             drawText(
