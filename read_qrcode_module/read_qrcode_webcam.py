@@ -2,6 +2,7 @@ import cv2
 import time
 import configparser
 import pytz
+import serial
 from qr_reader import QRData
 from camera import Camera
 from reader_logic import ReaderLogic
@@ -30,6 +31,8 @@ try:
 except Exception as e:
     print(f"Configure file error: {e}")
     exit()
+
+ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
 
 
 def drawText(frame, x, y, text, color=GREEN_COLOR):
@@ -105,6 +108,7 @@ try:
                                 token, LOCATION, result["status"], int(time.time())
                             )
                             arranged_data = qr_data.get_data()
+                            ser.write((arranged_data + "\n").encode("utf-8"))
                             qr_data.write_data()
                             print(result["message"])
                             showResult(message_color)

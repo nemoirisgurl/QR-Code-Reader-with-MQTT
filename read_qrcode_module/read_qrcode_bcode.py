@@ -1,6 +1,7 @@
 import time
 import configparser
 import pytz
+import serial
 from qr_reader import QRData
 from reader_logic import ReaderLogic
 from datetime import datetime
@@ -23,7 +24,7 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-
+ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
 qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
 scan_history = qr_reader.scan_history
 
@@ -40,6 +41,7 @@ try:
                         token, DEVICE_LOCATION, result["status"], int(time.time())
                     )
                     arranged_data = qr_data.get_data()
+                    ser.write((arranged_data + "\n").encode("utf-8"))
                     qr_data.write_data()
                     print(
                         f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
