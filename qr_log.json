@@ -1,56 +1,50 @@
 [
     {
-        "token": "YT7Z5rrPc4tHN-25FZCqqn",
+        "token": "NQZf2mWzkJm0mM89pL0TOr",
         "location": "Place1",
-        "check": 1,
-        "epoch": 1759211562
+        "check": 0,
+        "epoch": 1759335724
     },
     {
         "token": "NQZf2mWzkJm0mM89pL0TOr",
         "location": "Place1",
         "check": 1,
-        "epoch": 1759211782
+        "epoch": 1759335754
     },
     {
         "token": "NQZf2mWzkJm0mM89pL0TOr",
         "location": "Place1",
         "check": 1,
-        "epoch": 1759212075
-    },
-    {
-        "token": "NQZf2mWzkJm0mM89pL0TOr",
-        "location": "Place1",
-        "check": -1,
-        "epoch": 1759212077
-    },
-    {
-        "token": "NQZf2mWzkJm0mM89pL0TOr",
-        "location": "Place1",
-        "check": -1,
-        "epoch": 1759212079
+        "epoch": 1759335807
     },
     {
         "token": "NQZf2mWzkJm0mM89pL0TOr",
         "location": "Place1",
         "check": 1,
-        "epoch": 1759212081
-    },
-    {
-        "token": "NQZf2mWzkJm0mM89pL0TOr",
-        "location": "Place1",
-        "check": -1,
-        "epoch": 1759212083
-    },
-    {
-        "token": "NQZf2mWzkJm0mM89pL0TOr",
-        "location": "Place1",
-        "check": -1,
-        "epoch": 1759212085
+        "epoch": 1759335872
     },
     {
         "token": "NQZf2mWzkJm0mM89pL0TOr",
         "location": "Place1",
         "check": 1,
-        "epoch": 1759212087
+        "epoch": 1759335878
+    },
+    {
+        "token": "NQZf2mWzkJm0mM89pL0TOr",
+        "location": "Place1",
+        "check": 1,
+        "epoch": 1759335884
+    },
+    {
+        "token": "cleYidgQhg9lnbrn2cc_vL",
+        "location": "Place1",
+        "check": 1,
+        "epoch": 1759337072
+    },
+    {
+        "token": "9Ck7emBL45Z2DhsNB43h9T",
+        "location": "Place1",
+        "check": 1,
+        "epoch": 1759337195
     }
 ]

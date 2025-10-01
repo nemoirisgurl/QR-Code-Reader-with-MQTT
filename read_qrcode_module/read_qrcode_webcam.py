@@ -32,7 +32,7 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
+ser = serial.Serial("COM4", 115200, timeout=1)
 
 
 def drawText(frame, x, y, text, color=GREEN_COLOR):
