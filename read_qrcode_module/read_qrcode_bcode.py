@@ -44,7 +44,7 @@ try:
                         )
                         ser.write(
                             (
-                                f"{token}, {result['message']}, {result['status']}" + "\n"
+                                f"{token},{result['message']},{result['status']}" + "\n"
                             ).encode("utf-8")
                         )
                         qr_data.write_data()

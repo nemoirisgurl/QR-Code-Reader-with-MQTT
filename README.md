@@ -27,9 +27,10 @@ python -m venv venv
 ```
    * **MacOS/Linux:**
 ```bash
-sudo apt install mosquitto-clients 
 python3 -m venv venv
 source venv/bin/activate
+sudo apt install libzbar0
+sudo apt install libzbar-dev
 ```
 
 3.  Install the required Python packages:

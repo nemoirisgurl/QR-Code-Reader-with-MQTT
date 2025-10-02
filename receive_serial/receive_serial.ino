@@ -38,7 +38,7 @@ void printData(String data) {
   tft.setTextSize(smallTextSize);
   while ((dividerIndex = data.indexOf(',', start)) != -1) {
     String message = data.substring(start, dividerIndex);
-    if (fieldIndex == 1){
+    if (fieldIndex == 2){
       drawStatus(message.toInt());
     } else {
       tft.setTextColor(TFT_ORANGE, TFT_WHITE);

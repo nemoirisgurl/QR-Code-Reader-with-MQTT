@@ -110,7 +110,7 @@ try:
                                 )
                                 ser.write(
                                     (
-                                        f"{token}, {result['message']}, {result['status']}"
+                                        f"{token},{result['message']},{result['status']}"
                                         + "\n"
                                     ).encode("utf-8")
                                 )
