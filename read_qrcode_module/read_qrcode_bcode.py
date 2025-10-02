@@ -24,32 +24,39 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-ser = serial.Serial("COM4", 115200, timeout=1)
+ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
+#ser = serial.Serial("COM4", 115200, timeout=1)
 qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
 scan_history = qr_reader.scan_history
 
 try:
     while True:
-        current_time = time.time()
-        if current_time > message_expiry_time:
-            message_span = ""
-            token = input()
-            if len(token) == 22:
-                result = qr_reader.read_qr(token)
-                if result["qr_data"] and result["status"] != -1:
-                    qr_data = QRData(
-                        token, DEVICE_LOCATION, result["status"], int(time.time())
-                    )
-                    ser.write(
-                        (
-                            f"{token}, {result['message']}, {result['status']}" + "\n"
-                        ).encode("utf-8")
-                    )
-                    qr_data.write_data()
-                    print(
-                        f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
-                    )
-                message_expiry_time = time.time() + send_interval
+        try:
+            current_time = time.time()
+            if current_time > message_expiry_time:
+                message_span = ""
+                token = input()
+                if len(token) == 22:
+                    result = qr_reader.read_qr(token)
+                    if result["qr_data"] and result["status"] != -1:
+                        qr_data = QRData(
+                            token, DEVICE_LOCATION, result["status"], int(time.time())
+                        )
+                        ser.write(
+                            (
+                                f"{token}, {result['message']}, {result['status']}" + "\n"
+                            ).encode("utf-8")
+                        )
+                        qr_data.write_data()
+                        print(
+                            f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
+                        )
+                    message_expiry_time = time.time() + send_interval
+        except Exception as e:
+            print(
+                f"Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}"
+            )
+            continue
 
 
 except KeyboardInterrupt:

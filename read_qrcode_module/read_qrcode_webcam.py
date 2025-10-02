@@ -32,8 +32,6 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-ser = serial.Serial("COM4", 115200, timeout=1)
-
 
 def drawText(frame, x, y, text, color=GREEN_COLOR):
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -64,6 +62,8 @@ cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 try:
     while True:
         try:
+            ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
+            #ser = serial.Serial("COM4", 115200, timeout=1)
             ret, frame = cap.get_frame()
             if not ret:
                 cap = Camera()

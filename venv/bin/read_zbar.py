@@ -1,4 +1,4 @@
-#!/home/pi/Desktop/QR-Code-Reader-with-MQTT/venv/bin/python3
+#!/home/nemo/Desktop/QR-Code-Reader-with-MQTT/venv/bin/python3
 from __future__ import print_function
 
 import argparse
