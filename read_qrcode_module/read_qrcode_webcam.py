@@ -2,7 +2,9 @@ import cv2
 import time
 import configparser
 import pytz
+import re
 import serial
+import serial.tools.list_ports
 from qr_reader import QRData
 from camera import Camera
 from reader_logic import ReaderLogic
@@ -27,7 +29,6 @@ try:
     config.read(CONFIG_FILE)
     LOCATION = config.get("Device", "Location")
     SCAN_COOLDOWN = config.getint("Device", "ScanCooldown")
-    READER_SIZE = config.getint("Device", "ReaderSize")
 except Exception as e:
     print(f"Configure file error: {e}")
     exit()
@@ -44,13 +45,42 @@ def showResult(color):
     cv2.rectangle(
         frame,
         (roi_x, roi_y),
-        (roi_x + READER_SIZE, roi_y + READER_SIZE),
+        (roi_x + reader_size, roi_y + reader_size),
         color,
         3,
     )
 
 
-cap = Camera()
+def get_serial_port(baudrate=115200, timeout=1):
+    while True:
+        ports = list(serial.tools.list_ports.comports())
+        if not ports:
+            print("No serial ports found. Retrying in 2 seconds...")
+            time.sleep(2)
+            continue
+        for p in ports:
+            try:
+                ser = serial.Serial(p.device, baudrate, timeout=timeout)
+                print(f"Connected to serial port: {p.device}")
+                return ser
+            except serial.SerialException:
+                continue
+        print("No available serial ports. Retrying in 2 seconds...")
+        time.sleep(2)
+
+
+def get_camera():
+    for cam in range(5):
+        cap = Camera(camera_index=cam)
+        if cap.cap.isOpened():
+            print(f"Camera index {cam} is available.")
+            return cap
+        else:
+            time.sleep(2)
+
+
+ser = get_serial_port()
+cap = get_camera()
 qr = cv2.QRCodeDetector()
 qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
 
@@ -62,11 +92,10 @@ cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 try:
     while True:
         try:
-            ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1)
-            #ser = serial.Serial("COM4", 115200, timeout=1)
             ret, frame = cap.get_frame()
-            if not ret:
-                cap = Camera()
+            if not ret or frame is None:
+                cap.release()
+                cap = get_camera()
                 continue
             if (
                 cv2.waitKey(1) & 0xFF == ord("q")
@@ -74,26 +103,31 @@ try:
             ):
                 print("QR Code Reading is shutting down.")
                 exit()
-
+            drawText(
+                frame,
+                10,
+                30,
+                datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S"),
+                YELLOW_COLOR,
+            )
             # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
+
             frame_h, frame_w, _ = frame.shape
-            roi_x = int((frame_w - READER_SIZE) / 2)
-            roi_y = int((frame_h - READER_SIZE) / 2)
+            reader_size = int(min(frame_h, frame_w) * 0.4)
+            roi_x = int((frame_w - reader_size) / 2)
+            roi_y = int((frame_h - reader_size) / 2)
 
             current_time = time.time()
             if current_time > message_expiry_time:
                 message_span = ""
-                reader_frame = frame[
-                    roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
-                ]
                 roi_frame = frame[
-                    roi_y : roi_y + READER_SIZE, roi_x : roi_x + READER_SIZE
+                    roi_y : roi_y + reader_size, roi_x : roi_x + reader_size
                 ]
                 decoded_objects = decode(roi_frame)
 
                 for obj in decoded_objects:
                     token = obj.data.decode("utf-8")
-                    if len(token) == 22:
+                    if re.match(r"^[A-Za-z0-9_\-]{22}", token):
                         result = qr_reader.read_qr(token)
                         if result and result["qr_data"]:
                             message_span = result["message"]
@@ -110,7 +144,7 @@ try:
                                 )
                                 ser.write(
                                     (
-                                        f"{token},{result['message']},{result['status']}"
+                                        f"{token},{result['status']},{result['message']}"
                                         + "\n"
                                     ).encode("utf-8")
                                 )
@@ -121,7 +155,7 @@ try:
                                 frame,
                                 roi_x,
                                 roi_y - 50,
-                                f"{message_span} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}",
+                                f"{message_span} at: {datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S")}",
                                 message_color,
                             )
                         message_expiry_time = time.time() + send_interval
@@ -129,12 +163,15 @@ try:
                 cv2.rectangle(
                     frame,
                     (roi_x, roi_y),
-                    (roi_x + READER_SIZE, roi_y + READER_SIZE),
+                    (roi_x + reader_size, roi_y + reader_size),
                     (255, 255, 255),
                     3,
                 )
                 cv2.imshow(CV2_FRAME, frame)
-
+        except serial.SerialException:
+            print("Serial port disconnected. Attempting to reconnect...")
+            ser.close()
+            ser = get_serial_port()
         except Exception as e:
             print(
                 f"Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}"

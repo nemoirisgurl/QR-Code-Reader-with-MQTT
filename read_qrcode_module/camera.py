@@ -1,10 +1,22 @@
 import cv2
 import time
 import threading
+import configparser
+
+CONFIG_FILE = "config.ini"
+config = configparser.ConfigParser()
+try:
+    config.read(CONFIG_FILE)
+    CAMERA_WIDTH = config.getint("Device", "CameraWidth", fallback=1280)
+    CAMERA_HEIGHT = config.getint("Device", "CameraHeight", fallback=720)
+except Exception as e:
+    print(f"Configure file error: {e}")
+    CAMERA_WIDTH = 1280
+    CAMERA_HEIGHT = 720
 
 
 class Camera:
-    def __init__(self, camera_index=0, width=640, height=480):
+    def __init__(self, camera_index=0, width=1280, height=720):
         self.camera_index = camera_index
         self.cap = cv2.VideoCapture(self.camera_index)
         if not self.cap.isOpened():
@@ -48,7 +60,7 @@ class Camera:
 
 
 if __name__ == "__main__":
-    cam = Camera()
+    cam = Camera(0, CAMERA_WIDTH, CAMERA_HEIGHT)
     cv2.namedWindow("Camera Test | Press 'q' to exit")
     while True:
         ret, frame = cam.get_frame()
