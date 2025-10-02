@@ -31,6 +31,7 @@ python3 -m venv venv
 source venv/bin/activate
 sudo apt install libzbar0
 sudo apt install libzbar-dev
+sudo usermod -a -G dialout $USER
 ```
 
 3.  Install the required Python packages:

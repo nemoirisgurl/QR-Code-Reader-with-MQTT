@@ -107,7 +107,7 @@ try:
                 frame,
                 10,
                 30,
-                datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S"),
+                datetime.now(pytz.timezone('Asia/Bangkok')).strftime("%H:%M:%S"),
                 YELLOW_COLOR,
             )
             # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
@@ -155,7 +155,7 @@ try:
                                 frame,
                                 roi_x,
                                 roi_y - 50,
-                                f"{message_span} at: {datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S")}",
+                                f"{message_span} at: {datetime.now(pytz.timezone('Asia/Bangkok')).strftime("%H:%M:%S")}",
                                 message_color,
                             )
                         message_expiry_time = time.time() + send_interval

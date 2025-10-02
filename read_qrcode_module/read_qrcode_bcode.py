@@ -78,7 +78,7 @@ try:
             ser = get_serial_port()
         except Exception as e:
             print(
-                f"Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}"
+                f'Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
             )
             continue
 
