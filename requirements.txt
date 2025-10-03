@@ -5,3 +5,4 @@ pytz
 qrcode 
 Pillow 
 qrcode[pil]
+pyserial
