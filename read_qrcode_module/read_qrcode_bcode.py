@@ -46,6 +46,7 @@ def get_serial_port(baudrate=115200, timeout=1):
             time.sleep(2)
     except KeyboardInterrupt:
         print("QR Code Reading is shutting down.")
+        exit()
 
 
 ser = get_serial_port()
