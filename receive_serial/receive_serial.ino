@@ -7,6 +7,8 @@ int x = 10;
 int y = 30;
 int smallTextSize = 1;
 int largeTextSize = 2;
+unsigned long lastUpdate = 0;
+unsigned long idleTimeout = 5000;
 
 void setup() {
   Serial.begin(115200);
@@ -20,12 +22,12 @@ void setup() {
   tft.println("Idle");
 }
 
-void drawStatus(String token, int status){
+void drawStatus(String token, int status) {
   tft.setCursor(x, tft.height() - y);
   // draw checkout door
-  if (status == 0){
+  if (status == 0) {
     tft.fillRect(120, 50, 120, 140, TFT_BROWN);
-    tft.drawRect(120, 50, 120, 140, TFT_BLACK); 
+    tft.drawRect(120, 50, 120, 140, TFT_BLACK);
     tft.fillCircle(200, 120, 6, TFT_YELLOW);
     tft.drawCircle(200, 120, 6, TFT_BLACK);
     tft.print(token);
@@ -59,10 +61,10 @@ void printData(String data) {
   tft.setTextSize(smallTextSize);
   while ((dividerIndex = data.indexOf(',', start)) != -1) {
     String message = data.substring(start, dividerIndex);
-    if (fieldIndex == 0){
+    if (fieldIndex == 0) {
       token = message;
     }
-    if (fieldIndex == 1){
+    if (fieldIndex == 1) {
       drawStatus(token, message.toInt());
     } else {
       tft.setTextColor(TFT_ORANGE, TFT_WHITE);
@@ -90,5 +92,13 @@ void loop() {
     tft.setTextColor(TFT_YELLOW, TFT_WHITE);
     tft.println("QR Code:");
     printData(serialInput);
+    lastUpdate = millis();
+  }
+  if (millis() - lastUpdate > idleTimeout) {
+    tft.fillScreen(TFT_WHITE);
+    tft.setCursor(x, y);
+    tft.setTextColor(TFT_GREEN, TFT_WHITE);
+    tft.println("Idle");
+    lastUpdate = millis();
   }
 }
