@@ -62,25 +62,31 @@ try:
                         qr_data = QRData(
                             token, DEVICE_LOCATION, result["status"], int(time.time())
                         )
-                        ser.write(
-                            (
-                                f"{token},{result['status']},{result['message']}" + "\n"
-                            ).encode("utf-8")
-                        )
-                        qr_data.write_data()
-                        print(
-                            f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
-                        )
+                        try:
+                            ser.write(
+                                (
+                                    f"{token},{result['status']},{result['message']}" + "\n"
+                                ).encode("utf-8")
+                            )
+                            qr_data.write_data()
+                            print(
+                                f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
+                            )
+                        except serial.SerialException:
+                            print("Serial port disconnected. Attempting to reconnect...")
+                            ser.close()
+                            ser = get_serial_port()
                     message_expiry_time = time.time() + send_interval
+
         except serial.SerialException:
             print("Serial port disconnected. Attempting to reconnect...")
-            ser.close()
             ser = get_serial_port()
         except Exception as e:
             print(
                 f'Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
             )
             continue
+
 
 
 except KeyboardInterrupt:

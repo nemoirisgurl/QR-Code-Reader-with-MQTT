@@ -107,7 +107,7 @@ try:
                 frame,
                 10,
                 30,
-                datetime.now(pytz.timezone('Asia/Bangkok')).strftime("%H:%M:%S"),
+                datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S"),
                 YELLOW_COLOR,
             )
             # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
@@ -127,7 +127,7 @@ try:
 
                 for obj in decoded_objects:
                     token = obj.data.decode("utf-8")
-                    if re.match(r"^[A-Za-z0-9_\-]{22}", token):
+                    if re.match(r"^[A-Za-z0-9_\-]{22}$", token):
                         result = qr_reader.read_qr(token)
                         if result and result["qr_data"]:
                             message_span = result["message"]
@@ -142,12 +142,17 @@ try:
                                 qr_data = QRData(
                                     token, LOCATION, result["status"], int(time.time())
                                 )
-                                ser.write(
-                                    (
-                                        f"{token},{result['status']},{result['message']}"
-                                        + "\n"
-                                    ).encode("utf-8")
-                                )
+                                try:
+                                    ser.write(
+                                        (
+                                            f"{token},{result['status']},{result['message']}"
+                                            + "\n"
+                                        ).encode("utf-8")
+                                    )
+                                except serial.SerialException:
+                                    print("Serial port disconnected. Attempting to reconnect...")
+                                    ser.close()
+                                    ser = get_serial_port()
                                 qr_data.write_data()
                             print(result["message"])
                             showResult(message_color)
@@ -174,7 +179,7 @@ try:
             ser = get_serial_port()
         except Exception as e:
             print(
-                f"Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}"
+                f"Error: {e} at: {datetime.now(pytz.timezone('Asia/bangkok')).strftime('%H:%M:%S')}"
             )
             continue
 
