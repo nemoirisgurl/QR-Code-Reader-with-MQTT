@@ -52,21 +52,25 @@ def showResult(color):
 
 
 def get_serial_port(baudrate=115200, timeout=1):
-    while True:
-        ports = list(serial.tools.list_ports.comports())
-        if not ports:
-            print("No serial ports found. Retrying in 2 seconds...")
-            time.sleep(2)
-            continue
-        for p in ports:
-            try:
-                ser = serial.Serial(p.device, baudrate, timeout=timeout)
-                print(f"Connected to serial port: {p.device}")
-                return ser
-            except serial.SerialException:
+    try:
+        while True:
+            ports = list(serial.tools.list_ports.comports())
+            if not ports:
+                print("No serial ports found. Retrying in 2 seconds...")
+                time.sleep(2)
                 continue
-        print("No available serial ports. Retrying in 2 seconds...")
-        time.sleep(2)
+            for p in ports:
+                try:
+                    ser = serial.Serial(p.device, baudrate, timeout=timeout)
+                    print(f"Connected to serial port: {p.device}")
+                    return ser
+                except serial.SerialException:
+                    continue
+            print("No available serial ports. Retrying in 2 seconds...")
+            time.sleep(2)
+    except KeyboardInterrupt:
+        print("QR Code Reader is shutting down...")
+        exit()
 
 
 def get_camera():
