@@ -18,7 +18,6 @@ GREEN_COLOR = (0, 255, 0)
 BLUE_COLOR = (255, 0, 0)
 YELLOW_COLOR = (255, 255, 0)
 WHITE_COLOR = (255, 255, 255)
-checkin_checkout_duration = 300
 send_interval = 2
 message_span = ""
 message_expiry_time = 0
@@ -29,6 +28,7 @@ try:
     config.read(CONFIG_FILE)
     LOCATION = config.get("Device", "Location")
     SCAN_COOLDOWN = config.getint("Device", "ScanCooldown")
+    CHECKIN_CHECKOUT_DURATION = config.getint("Device", "StayDuration")
 except Exception as e:
     print(f"Configure file error: {e}")
     exit()
@@ -86,7 +86,7 @@ def get_camera():
 ser = get_serial_port()
 cap = get_camera()
 qr = cv2.QRCodeDetector()
-qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
+qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
 
 scan_history = qr_reader.scan_history
 

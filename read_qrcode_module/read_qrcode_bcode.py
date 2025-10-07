@@ -10,7 +10,6 @@ from datetime import datetime
 
 
 CONFIG_FILE = "config.ini"
-checkin_checkout_duration = 300
 send_interval = 2
 message_span = ""
 message_expiry_time = 0
@@ -22,6 +21,7 @@ try:
     config.read(CONFIG_FILE)
     DEVICE_LOCATION = config.get("Device", "Location")
     SCAN_COOLDOWN = config.getint("Device", "ScanCooldown")
+    CHECKIN_CHECKOUT_DURATION = config.getint("Device", "StayDuration")
 except Exception as e:
     print(f"Configure file error: {e}")
     exit()
@@ -50,7 +50,7 @@ def get_serial_port(baudrate=115200, timeout=1):
 
 
 ser = get_serial_port()
-qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, checkin_checkout_duration)
+qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
 scan_history = qr_reader.scan_history
 
 try:

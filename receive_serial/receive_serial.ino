@@ -7,8 +7,8 @@ int x = 10;
 int y = 30;
 int smallTextSize = 1;
 int largeTextSize = 2;
-unsigned long lastUpdate = 0;
 unsigned long idleTimeout = 5000;
+unsigned long lastUpdate = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -20,7 +20,9 @@ void setup() {
   tft.setCursor(x, y);
   tft.setTextColor(TFT_GREEN, TFT_WHITE);
   tft.println("Idle");
+  lastUpdate = millis();
 }
+
 
 void drawStatus(String token, int status) {
   tft.setCursor(x, tft.height() - y);
