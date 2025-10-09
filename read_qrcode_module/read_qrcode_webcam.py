@@ -7,7 +7,7 @@ import serial
 import serial.tools.list_ports
 from qr_reader import QRData
 from camera import Camera
-from reader_logic import ReaderLogic
+from reader_logic import ReaderLogic, poll_mode_from_serial, apply_forced_mode
 from datetime import datetime
 from pyzbar.pyzbar import decode
 
@@ -87,8 +87,10 @@ ser = get_serial_port()
 cap = get_camera()
 qr = cv2.QRCodeDetector()
 qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
-
+time_format = pytz.timezone("Asia/Bangkok")
+token_format = re.compile(r"^[A-Za-z0-9_\-]{22}$")
 scan_history = qr_reader.scan_history
+check_mode = 1
 
 cv2.namedWindow(CV2_FRAME, cv2.WINDOW_NORMAL)
 cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -96,6 +98,7 @@ cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 try:
     while True:
         try:
+            check_mode = poll_mode_from_serial(ser, check_mode)
             ret, frame = cap.get_frame()
             if not ret or frame is None:
                 cap.release()
@@ -131,8 +134,9 @@ try:
 
                 for obj in decoded_objects:
                     token = obj.data.decode("utf-8")
-                    if re.match(r"^[A-Za-z0-9_\-]{22}$", token):
+                    if token_format.match(token):
                         result = qr_reader.read_qr(token)
+                        result = apply_forced_mode(qr_reader, token, result, check_mode)
                         if result and result["qr_data"]:
                             message_span = result["message"]
                             match (result["status"]):
@@ -164,7 +168,7 @@ try:
                                 frame,
                                 roi_x,
                                 roi_y - 50,
-                                f"{message_span} at: {datetime.now(pytz.timezone('Asia/Bangkok')).strftime("%H:%M:%S")}",
+                                f"{message_span} at: {datetime.now(time_format).strftime("%H:%M:%S")}",
                                 message_color,
                             )
                         message_expiry_time = time.time() + send_interval
@@ -183,7 +187,7 @@ try:
             ser = get_serial_port()
         except Exception as e:
             print(
-                f"Error: {e} at: {datetime.now(pytz.timezone('Asia/bangkok')).strftime('%H:%M:%S')}"
+                f"Error: {e} at: {datetime.now(time_format).strftime('%H:%M:%S')}"
             )
             continue
 

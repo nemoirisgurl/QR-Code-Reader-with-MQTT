@@ -1,3 +1,4 @@
+import sys
 import time
 import configparser
 import pytz
@@ -5,9 +6,10 @@ import re
 import serial
 import serial.tools.list_ports
 from qr_reader import QRData
-from reader_logic import ReaderLogic
+from reader_logic import ReaderLogic, poll_mode_from_serial, apply_forced_mode
 from datetime import datetime
-
+from threading import Thread
+from queue import Queue, Empty
 
 CONFIG_FILE = "config.ini"
 send_interval = 2
@@ -26,6 +28,12 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
+def stdin_reader(q: Queue): 
+    try: 
+        for line in sys.stdin: 
+            q.put(line.strip()) 
+    except Exception: 
+        pass
 
 def get_serial_port(baudrate=115200, timeout=1):
     try:
@@ -51,17 +59,30 @@ def get_serial_port(baudrate=115200, timeout=1):
 
 ser = get_serial_port()
 qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
+time_format = pytz.timezone("Asia/Bangkok")
+token_format = re.compile(r"^[A-Za-z0-9_\-]{22}$")
 scan_history = qr_reader.scan_history
+check_mode = 1
+
+q = Queue()
+t = Thread(target=stdin_reader, args=(q,), daemon=True)
+t.start()
 
 try:
     while True:
         try:
             current_time = time.time()
+            check_mode = poll_mode_from_serial(ser, check_mode)
             if current_time > message_expiry_time:
                 message_span = ""
-                token = input()
-                if re.match(r"^[A-Za-z0-9_\-]{22}$", token):
+                try:
+                    token = q.get_nowait()
+                except Empty:
+                    time.sleep(0.01)
+                    continue
+                if token_format.match(token):
                     result = qr_reader.read_qr(token)
+                    result = apply_forced_mode(qr_reader, token, result, check_mode)
                     if result["qr_data"] and result["status"] != -1:
                         qr_data = QRData(
                             token, DEVICE_LOCATION, result["status"], int(time.time())
@@ -74,20 +95,21 @@ try:
                             )
                             qr_data.write_data()
                             print(
-                                f'{result["message"]} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
+                                f'{result["message"]} at: {datetime.now(time_format).strftime("%H:%M:%S")}'
                             )
                         except serial.SerialException:
                             print("Serial port disconnected. Attempting to reconnect...")
                             ser.close()
                             ser = get_serial_port()
                     message_expiry_time = time.time() + send_interval
+                    print(scan_history)
 
         except serial.SerialException:
             print("Serial port disconnected. Attempting to reconnect...")
             ser = get_serial_port()
         except Exception as e:
             print(
-                f'Error: {e} at: {datetime.now(pytz.timezone("Asia/bangkok")).strftime("%H:%M:%S")}'
+                f'Error: {e} at: {datetime.now(time_format).strftime("%H:%M:%S")}'
             )
             continue
 

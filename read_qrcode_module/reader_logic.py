@@ -33,7 +33,8 @@ class ReaderLogic:
 
     def read_qr(self, token):
         timestamp = int(time.time())
-        if token in self.scan_history:
+        existed_before = token in self.scan_history
+        if existed_before:
             last_scan_time = self.scan_history[token]
             time_diff = timestamp - last_scan_time
             if time_diff < self.cooldown:
@@ -52,4 +53,54 @@ class ReaderLogic:
             self.scan_history[token] = timestamp
             message = "Checked in"
         qr_data = f"{token},{self.location},{status},{timestamp}"
-        return {"status": status, "message": message, "qr_data": qr_data}
+        return {"status": status, "message": message, "qr_data": qr_data, "existed": existed_before}
+    
+    @staticmethod
+    def poll_mode_from_serial(ser, current_mode):
+        try:
+            updated_mode = current_mode
+            # อ่านทุกอย่างที่รออยู่ในบัฟเฟอร์ตอนนี้
+            while getattr(ser, "in_waiting", 0):
+                raw = ser.readline()
+                try:
+                    line = raw.decode("utf-8", errors="ignore").strip()
+                except Exception:
+                    continue
+                if line.startswith("MODE:"):
+                    val = line[5:].strip()
+                    if val in ("0", "1"):
+                        updated_mode = int(val)
+                        print(f"[MODE] Received mode from ESP32 => {updated_mode}")
+            return updated_mode
+        except Exception:
+            return current_mode
+    
+    @staticmethod
+    def apply_forced_mode(qr_reader, token, result, forced_mode):
+        try:
+            status = result.get("status", -1)
+            message = result.get("message", "No message")
+            now_ts = int(time.time())
+            existed_before = bool(result.get("existed"))
+            if forced_mode == 0:
+                if existed_before:
+                    del qr_reader.scan_history[token]
+                status = 0
+                message = "Checked out"
+            elif forced_mode == 1:
+                qr_reader.scan_history[token] = now_ts
+                status = 1
+                message = "Rechecked in" if existed_before == 1 else "Checked in"
+
+            result["status"] = status
+            result["message"] = message
+            return result
+        except Exception:
+            return result
+
+
+def poll_mode_from_serial(ser, current_mode):
+    return ReaderLogic.poll_mode_from_serial(ser, current_mode)
+
+def apply_forced_mode(qr_reader, token, result, forced_mode):
+    return ReaderLogic.apply_forced_mode(qr_reader, token, result, forced_mode)

@@ -3,14 +3,23 @@
 
 TFT_eSPI tft = TFT_eSPI();
 
+const int toggleBtn = 25;
+
 int x = 10;
 int y = 30;
+int checkStatus = 1;
+int lastButtonState = HIGH;
 int smallTextSize = 1;
 int largeTextSize = 2;
 unsigned long idleTimeout = 5000;
 unsigned long lastUpdate = 0;
+unsigned long lastDebounceMs = 0;
+const unsigned long debounceDelay = 200;
+
+uint16_t COLOR_BROWN, COLOR_ORANGE;
 
 void setup() {
+  pinMode(toggleBtn, INPUT_PULLUP);
   Serial.begin(115200);
   tft.init();
   tft.setRotation(0);
@@ -21,14 +30,16 @@ void setup() {
   tft.setTextColor(TFT_GREEN, TFT_WHITE);
   tft.println("Idle");
   lastUpdate = millis();
+  COLOR_BROWN  = tft.color565(165, 42, 42);
+  COLOR_ORANGE = tft.color565(255, 165, 0);
 }
 
 
-void drawStatus(String token, int status) {
+void drawStatus(const String& token, int status) {
   tft.setCursor(x, tft.height() - y);
   // draw checkout door
   if (status == 0) {
-    tft.fillRect(120, 50, 120, 140, TFT_BROWN);
+    tft.fillRect(120, 50, 120, 140, COLOR_BROWN);
     tft.drawRect(120, 50, 120, 140, TFT_BLACK);
     tft.fillCircle(200, 120, 6, TFT_YELLOW);
     tft.drawCircle(200, 120, 6, TFT_BLACK);
@@ -69,13 +80,13 @@ void printData(String data) {
     if (fieldIndex == 1) {
       drawStatus(token, message.toInt());
     } else {
-      tft.setTextColor(TFT_ORANGE, TFT_WHITE);
+      tft.setTextColor(COLOR_ORANGE, TFT_WHITE);
       tft.setCursor(x, y + dy);
       tft.println(message);
       Serial.println(message);
+      dy += 30;
     }
     start = dividerIndex + 1;
-    dy += 30;
     fieldIndex++;
   }
   String message = data.substring(start);
@@ -86,6 +97,29 @@ void printData(String data) {
 
 void loop() {
   tft.setTextSize(largeTextSize);
+  int reading = digitalRead(toggleBtn);
+  if (reading != lastButtonState) {
+    lastDebounceMs = millis();
+
+  }
+  if ((millis() - lastDebounceMs) > debounceDelay) {
+    static int stableState = HIGH;
+    if (reading != stableState) {
+      if (reading == HIGH && stableState == LOW) {
+        checkStatus = 1 - checkStatus;
+        tft.fillScreen(TFT_WHITE);
+        tft.setCursor(x, y);
+        tft.setTextColor(TFT_YELLOW, TFT_WHITE);
+        tft.println("Mode toggled");
+        drawStatus("---", checkStatus);
+        Serial.printf("MODE:%d\n", checkStatus);
+        lastUpdate = millis();
+      }
+      stableState = reading;
+    }
+  }
+  lastButtonState = reading;
+
   if (Serial.available()) {
     String serialInput = Serial.readStringUntil('\n');
     serialInput.trim();
@@ -101,6 +135,7 @@ void loop() {
     tft.setCursor(x, y);
     tft.setTextColor(TFT_GREEN, TFT_WHITE);
     tft.println("Idle");
+    drawStatus("---", checkStatus);
     lastUpdate = millis();
   }
 }
