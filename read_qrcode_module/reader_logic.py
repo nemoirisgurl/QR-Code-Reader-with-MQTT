@@ -42,7 +42,7 @@ class ReaderLogic:
                 message = "Wait..."
             elif time_diff > self.checkin_checkout_duration:
                 status = 0
-                del self.scan_history[token]
+                self.scan_history.pop(token, None)
                 message = "Checked out"
             else:
                 status = 1
@@ -83,8 +83,7 @@ class ReaderLogic:
             now_ts = int(time.time())
             existed_before = bool(result.get("existed"))
             if forced_mode == 0:
-                if existed_before:
-                    del qr_reader.scan_history[token]
+                qr_reader.scan_history.pop(token, None)
                 status = 0
                 message = "Checked out"
             elif forced_mode == 1:

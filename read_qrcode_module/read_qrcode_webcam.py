@@ -87,7 +87,8 @@ ser = get_serial_port()
 cap = get_camera()
 qr = cv2.QRCodeDetector()
 qr_reader = ReaderLogic(LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
-time_format = pytz.timezone("Asia/Bangkok")
+timezone = pytz.timezone("Asia/Bangkok")
+time_format = "%I:%M:%S %p"
 token_format = re.compile(r"^[A-Za-z0-9_\-]{22}$")
 scan_history = qr_reader.scan_history
 check_mode = 1
@@ -114,7 +115,7 @@ try:
                 frame,
                 10,
                 30,
-                datetime.now(pytz.timezone("Asia/Bangkok")).strftime("%H:%M:%S"),
+                datetime.now(timezone).strftime(time_format),
                 YELLOW_COLOR,
             )
             # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
@@ -153,7 +154,7 @@ try:
                                 try:
                                     ser.write(
                                         (
-                                            f"{token},{result['status']},{result['message']}"
+                                            f"{token},{result['status']},{datetime.now(timezone).strftime(time_format)}"
                                             + "\n"
                                         ).encode("utf-8")
                                     )
@@ -168,7 +169,7 @@ try:
                                 frame,
                                 roi_x,
                                 roi_y - 50,
-                                f"{message_span} at: {datetime.now(time_format).strftime("%H:%M:%S")}",
+                                f"{message_span} at: {datetime.now(timezone).strftime(time_format)}",
                                 message_color,
                             )
                         message_expiry_time = time.time() + send_interval
@@ -187,7 +188,7 @@ try:
             ser = get_serial_port()
         except Exception as e:
             print(
-                f"Error: {e} at: {datetime.now(time_format).strftime('%H:%M:%S')}"
+                f"Error: {e} at: {datetime.now(timezone).strftime('%H:%M:%S')}"
             )
             continue
 

@@ -59,7 +59,8 @@ def get_serial_port(baudrate=115200, timeout=1):
 
 ser = get_serial_port()
 qr_reader = ReaderLogic(DEVICE_LOCATION, SCAN_COOLDOWN, CHECKIN_CHECKOUT_DURATION)
-time_format = pytz.timezone("Asia/Bangkok")
+timezone = pytz.timezone("Asia/Bangkok")
+time_format = "%I:%M:%S %p"
 token_format = re.compile(r"^[A-Za-z0-9_\-]{22}$")
 scan_history = qr_reader.scan_history
 check_mode = 1
@@ -90,12 +91,12 @@ try:
                         try:
                             ser.write(
                                 (
-                                    f"{token},{result['status']},{result['message']}" + "\n"
+                                    f"{token},{result['status']},{datetime.now(timezone).strftime(time_format)}" + "\n"
                                 ).encode("utf-8")
                             )
                             qr_data.write_data()
                             print(
-                                f'{result["message"]} at: {datetime.now(time_format).strftime("%H:%M:%S")}'
+                                f'{result["message"]} at: {datetime.now(timezone).strftime(time_format)}'
                             )
                         except serial.SerialException:
                             print("Serial port disconnected. Attempting to reconnect...")
@@ -109,7 +110,7 @@ try:
             ser = get_serial_port()
         except Exception as e:
             print(
-                f'Error: {e} at: {datetime.now(time_format).strftime("%H:%M:%S")}'
+                f'Error: {e} at: {datetime.now(timezone).strftime(time_format)}'
             )
             continue
 
