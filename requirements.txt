@@ -6,3 +6,4 @@ qrcode==8.2
 Pillow==11.3.0 
 qrcode[pil]==8.2
 pyserial==3.5
+evdev==1.9.2

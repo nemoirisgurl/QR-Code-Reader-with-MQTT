@@ -121,7 +121,7 @@ try:
             # กำหนดขนาดและตำแหน่งของพื้นที่สแกน QR Code
 
             frame_h, frame_w, _ = frame.shape
-            reader_size = int(min(frame_h, frame_w) * 0.4)
+            reader_size = int(min(frame_h, frame_w) * 0.5)
             roi_x = int((frame_w - reader_size) / 2)
             roi_y = int((frame_h - reader_size) / 2)
 

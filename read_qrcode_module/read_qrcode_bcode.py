@@ -9,6 +9,7 @@ from qr_reader import QRData
 from reader_logic import ReaderLogic, poll_mode_from_serial, apply_forced_mode
 from datetime import datetime
 from threading import Thread
+from evdev import InputDevice, ecodes, categorize
 from queue import Queue, Empty
 
 CONFIG_FILE = "config.ini"
@@ -28,12 +29,67 @@ except Exception as e:
     print(f"Configure file error: {e}")
     exit()
 
-def stdin_reader(q: Queue): 
-    try: 
-        for line in sys.stdin: 
-            q.put(line.strip()) 
-    except Exception: 
-        pass
+# --- evdev-based input for USB barcode scanner on Pi + xrdp ---
+
+SHIFT_KEYS = {ecodes.KEY_LEFTSHIFT, ecodes.KEY_RIGHTSHIFT}
+
+# แผนที่คีย์สำหรับ base64url-ish token: [A-Za-z0-9_-]
+KEYMAP = {
+    # digits row
+    ecodes.KEY_0:'0', ecodes.KEY_1:'1', ecodes.KEY_2:'2', ecodes.KEY_3:'3', ecodes.KEY_4:'4',
+    ecodes.KEY_5:'5', ecodes.KEY_6:'6', ecodes.KEY_7:'7', ecodes.KEY_8:'8', ecodes.KEY_9:'9',
+    # letters
+    ecodes.KEY_A:'a', ecodes.KEY_B:'b', ecodes.KEY_C:'c', ecodes.KEY_D:'d', ecodes.KEY_E:'e',
+    ecodes.KEY_F:'f', ecodes.KEY_G:'g', ecodes.KEY_H:'h', ecodes.KEY_I:'i', ecodes.KEY_J:'j',
+    ecodes.KEY_K:'k', ecodes.KEY_L:'l', ecodes.KEY_M:'m', ecodes.KEY_N:'n', ecodes.KEY_O:'o',
+    ecodes.KEY_P:'p', ecodes.KEY_Q:'q', ecodes.KEY_R:'r', ecodes.KEY_S:'s', ecodes.KEY_T:'t',
+    ecodes.KEY_U:'u', ecodes.KEY_V:'v', ecodes.KEY_W:'w', ecodes.KEY_X:'x', ecodes.KEY_Y:'y',
+    ecodes.KEY_Z:'z',
+    # symbols we accept
+    ecodes.KEY_MINUS:'-',  # '_' จะมาจาก Shift + MINUS
+    # keypad (รองรับ NumLock ทั้งคู่)
+    ecodes.KEY_KP0:'0', ecodes.KEY_KP1:'1', ecodes.KEY_KP2:'2', ecodes.KEY_KP3:'3', ecodes.KEY_KP4:'4',
+    ecodes.KEY_KP5:'5', ecodes.KEY_KP6:'6', ecodes.KEY_KP7:'7', ecodes.KEY_KP8:'8', ecodes.KEY_KP9:'9',
+}
+
+def evdev_reader(dev_path, q):
+    dev = InputDevice(dev_path)
+    buf = []
+    shift = False
+    for event in dev.read_loop():
+        if event.type != ecodes.EV_KEY:
+            continue
+        ke = categorize(event)
+
+        # track shift
+        if ke.scancode in SHIFT_KEYS:
+            shift = (ke.keystate == 1)  # 1=down, 0=up
+            continue
+
+        if ke.keystate != 1:  # key down only
+            continue
+
+        # ENTER or KEYPAD ENTER → ส่งหนึ่งบรรทัด
+        if ke.keycode in ('KEY_ENTER', 'KEY_KPENTER'):
+            token = ''.join(buf).strip()
+            buf.clear()
+            if token:
+                q.put(token)
+            continue
+
+        ch = KEYMAP.get(ke.scancode)
+        if not ch:
+            continue
+
+        # uppercase when shift
+        if 'a' <= ch <= 'z' and shift:
+            ch = ch.upper()
+        # underscore when Shift + minus
+        if ch == '-' and shift:
+            ch = '_'
+
+        buf.append(ch)
+
 
 def get_serial_port(baudrate=115200, timeout=1):
     try:
@@ -66,8 +122,10 @@ scan_history = qr_reader.scan_history
 check_mode = 1
 
 q = Queue()
-t = Thread(target=stdin_reader, args=(q,), daemon=True)
+DEV_PATH = "/dev/input/by-id/usb-SM_SM-2D_PRODUCT_HID_KBW_APP-000000000-event-kbd"
+t = Thread(target=evdev_reader, args=(DEV_PATH, q), daemon=True)
 t.start()
+
 
 try:
     while True:
