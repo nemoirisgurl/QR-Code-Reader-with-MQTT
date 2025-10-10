@@ -11,7 +11,7 @@ Follow these steps to set up the project environment.
 ### Prerequisites
 * Python 3.8+ and `pip`
 * Git
-* An MQTT Broker (e.g., [Mosquitto](https://mosquitto.org/download/)). Make sure the broker is installed and running.
+* Node.js
 
 ### Steps
 1. Clone this repository.
@@ -29,9 +29,46 @@ python -m venv venv
 ```bash
 python3 -m venv venv
 source venv/bin/activate
+```
+
+```bash
 sudo apt install libzbar0
 sudo apt install libzbar-dev
+sudo apt install -y python3-evdev
+```
+```bash
+
 sudo usermod -a -G dialout $USER
+```
+```bash
+
+sudo usermod -aG video $USER
+newgrp video
+```
+
+
+```bash
+groups
+sudo usermod -aG video $USER
+newgrp video
+ls -l /dev/video*
+v4l2-ctl --all | head -n 20
+```
+
+```bash
+sudo apt install -y python3-evdev
+ls -l /dev/input/by-id/
+
+sudo usermod -aG input $USER
+newgrp input
+
+sudo tee /etc/udev/rules.d/99-barcode-scanner.rules >/dev/null <<'EOF'
+SUBSYSTEM=="input", ATTRS{idVendor}=="ac90", ATTRS{idProduct}=="3002", GROUP="input", MODE="0660"
+EOF
+sudo udevadm control --reload
+sudo udevadm trigger
+
+ls -l /dev/input/by-id/ | grep -i "HID_KBW\|SM-2D\|ac90"
 ```
 
 3.  Install the required Python packages:
@@ -41,7 +78,7 @@ pip install -r requirements.txt
 
 4. Run MQTT Broker:
 ```bash
-mosquitto_sub -h <YOUR_BROKER> -p <PORT> -t <YOUR_TOPIC> -v
+node qrscan_pub.js
 ```
 
 ## Running
