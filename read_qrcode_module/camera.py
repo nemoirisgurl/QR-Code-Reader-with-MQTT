@@ -16,7 +16,7 @@ except Exception as e:
 
 
 class Camera:
-    def __init__(self, camera_index=0, width=1280, height=720):
+    def __init__(self, camera_index=0, width=CAMERA_WIDTH, height=CAMERA_HEIGHT):
         self.camera_index = camera_index
         self.cap = cv2.VideoCapture(self.camera_index)
         if not self.cap.isOpened():
