@@ -40,12 +40,6 @@ sudo apt install -y python3-evdev
 
 sudo usermod -a -G dialout $USER
 ```
-```bash
-
-sudo usermod -aG video $USER
-newgrp video
-```
-
 
 ```bash
 groups
