@@ -1,4 +1,3 @@
-import sys
 import time
 import configparser
 import pytz
@@ -142,6 +141,7 @@ try:
                 if token_format.match(token):
                     result = qr_reader.read_qr(token)
                     result = apply_forced_mode(qr_reader, token, result, check_mode)
+                    status = result.get("status", -1)
                     if result["qr_data"] and result["status"] != -1:
                         qr_data = QRData(
                             token, DEVICE_LOCATION, result["status"], int(time.time())
@@ -160,6 +160,20 @@ try:
                             print("Serial port disconnected. Attempting to reconnect...")
                             ser.close()
                             ser = get_serial_port()
+                    elif status == -1:
+                        next_checkout_str = result.get("next_checkout_str")
+                        if next_checkout_str:
+                            try:
+                                ser.write(f"TIME,-1,Checkout at {result['next_checkout_str']}\n".encode("utf-8"))
+                                print(f'{result["message"]} | Checkout time: {next_checkout_str}')
+                            except serial.SerialException:
+                                print("Serial port disconnected. Attempting to reconnect...")
+                                ser.close()
+                                ser = get_serial_port()
+                        else:
+                            print(f'{result["message"]} at: {datetime.now(timezone).strftime(time_format)}')
+
+
                     message_expiry_time = time.time() + send_interval
                     print(scan_history)
 

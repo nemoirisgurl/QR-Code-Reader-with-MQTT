@@ -69,17 +69,31 @@ void printData(String data) {
     String message = data.substring(start, dividerIndex);
     if (fieldIndex == 0) {
       token = message;
+    } else if (fieldIndex == 1) {
+      drawStatus(message.toInt());
+    } else {
+      if (message.length()) {
+        drawCentered(message, 20, TFT_BLACK, TFT_WHITE, smallTextSize);
+        Serial.println(message);
+      }
     }
-    if (fieldIndex == 1) {
+    start = dividerIndex + 1;
+    fieldIndex++;
+  }
+  String message = data.substring(start);
+  if (message.length()) {
+    if (fieldIndex == 0) {
+      token = message;
+    } else if (fieldIndex == 1) {
       drawStatus(message.toInt());
     } else {
       drawCentered(message, 20, TFT_BLACK, TFT_WHITE, smallTextSize);
       Serial.println(message);
     }
-    start = dividerIndex + 1;
     fieldIndex++;
   }
 }
+
 
 void setup() {
   pinMode(toggleBtn, INPUT_PULLUP);

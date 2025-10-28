@@ -1,7 +1,11 @@
 import time
 import json
 import os
+import pytz
+from datetime import datetime
 
+timezone = pytz.timezone("Asia/Bangkok")
+time_format = "%H:%M"
 
 class ReaderLogic:
     def __init__(self, location, cooldown, checkin_checkout_duration):
@@ -34,26 +38,68 @@ class ReaderLogic:
     def read_qr(self, token):
         timestamp = int(time.time())
         existed_before = token in self.scan_history
-        if existed_before:
-            last_scan_time = self.scan_history[token]
-            time_diff = timestamp - last_scan_time
-            if time_diff < self.cooldown:
-                status = -1
-                message = "Wait..."
-            elif time_diff > self.checkin_checkout_duration:
-                status = 0
-                self.scan_history.pop(token, None)
-                message = "Checked out"
-            else:
-                status = 1
-                self.scan_history[token] = timestamp
-                message = "Rechecked in"
-        else:
+        if not existed_before: # check in
             status = 1
             self.scan_history[token] = timestamp
             message = "Checked in"
+            qr_data = f"{token},{self.location},{status},{timestamp}"
+            return {
+                "status": status,
+                "message": message,
+                "qr_data": qr_data,
+                "existed": existed_before
+            }
+        
+        last_scan_time = self.scan_history[token]
+        time_diff = timestamp - last_scan_time
+
+        if time_diff > self.checkin_checkout_duration: # check out
+            status = 0
+            self.scan_history.pop(token, None)
+            message = "Checked out"
+            qr_data = f"{token},{self.location},{status},{timestamp}"
+            return {
+                "status": status,
+                "message": message,
+                "qr_data": qr_data,
+                "existed": existed_before,
+            }
+
+        remain_sec = self.checkin_checkout_duration - time_diff
+        if 0 < remain_sec <= 300: # after check in, before check out
+            status = -1
+            message = "Too soon to checkout"
+            next_checkout_epoch = last_scan_time + self.checkin_checkout_duration
+            next_checkout_str = datetime.fromtimestamp(next_checkout_epoch, tz=timezone).strftime(time_format)
+
+            return {
+                "status": status,
+                "message": message,
+                "qr_data": "",
+                "existed": existed_before,
+                "next_checkout_str": next_checkout_str,  
+            }
+
+        if time_diff <= self.cooldown:
+            status = -1
+            message = "Wait..."
+            return {
+                "status": status,
+                "message": message,
+                "qr_data": "",
+                "existed": existed_before,
+            }
+
+        status = 1 # re-check in
+        self.scan_history[token] = timestamp
+        message = "Rechecked in"
         qr_data = f"{token},{self.location},{status},{timestamp}"
-        return {"status": status, "message": message, "qr_data": qr_data, "existed": existed_before}
+        return {
+            "status": status,
+            "message": message,
+            "qr_data": qr_data,
+            "existed": existed_before,
+        }
     
     @staticmethod
     def poll_mode_from_serial(ser, current_mode):

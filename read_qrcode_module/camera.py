@@ -34,7 +34,7 @@ class Camera:
         actual_width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         actual_height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         print(
-            f"📷 Camera at index {self.camera_index} opened with resolution: {int(actual_width)}x{int(actual_height)}"
+            f"Camera at index {self.camera_index} opened with resolution: {int(actual_width)}x{int(actual_height)}"
         )
 
     def update_frame(self):

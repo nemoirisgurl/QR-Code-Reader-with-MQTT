@@ -102,6 +102,7 @@ timezone   = pytz.timezone("Asia/Bangkok")
 time_format = "%I:%M:%S %p"
 token_format = re.compile(r"^[A-Za-z0-9_\-]{22}$")  # base64url 22 ตัว
 check_mode = 1
+scan_history = qr_reader.scan_history
 
 cv2.namedWindow(CV2_FRAME, cv2.WINDOW_NORMAL)
 cv2.setWindowProperty(CV2_FRAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -202,11 +203,11 @@ try:
                     result = qr_reader.read_qr(token)
                     result = apply_forced_mode(qr_reader, token, result, check_mode)
 
-                    if result and result.get("qr_data"):
+                    if result:
                         status = result["status"]
                         color  = GREEN_COLOR if status == 1 else RED_COLOR if status == 0 else WHITE_COLOR
 
-                        if status != -1:
+                        if status != -1  and result.get("qr_data"):
                             safe_write_log(token, status, time.time())
                             try:
                                 ser.write(f"{token},{status},{now_str}\n".encode("utf-8"))
@@ -215,13 +216,27 @@ try:
                                 try: ser.close()
                                 except Exception: pass
                                 ser = get_serial_port()
+                        else:
+                            # กรณี 5 นาทีสุดท้ายก่อน checkout: ส่งเวลาเหลือ MM:SS ไปที่ Serial
+                            next_checkout_str = result.get("next_checkout_str")
+                            if next_checkout_str:
+                                try:
+                                    ser.write(f"TIME,-1,Checkout at {next_checkout_str}\n".encode("utf-8"))
+                                except serial.SerialException:
+                                    print("Serial port disconnected. Attempting to reconnect...")
+                                    try: ser.close()
+                                    except Exception: pass
+                                    ser = get_serial_port()
 
-                        print(result["message"])
-                        # วาดและ "จำ" ข้อมูลไว้เพื่อโชว์ค้าง
+                        print(
+                            f'{result["message"]} at: {datetime.now(timezone).strftime(time_format)}'
+                        )
+                        extra = f" | Checkout time: {result.get('next_checkout_str')}" if result.get("next_checkout_str") else ""
                         showResult(frame, roi_x, roi_y, reader_size, color)
-                        drawText(frame, roi_x, roi_y - 50, f"{result['message']} at: {now_str}", color)
-                        last_info = (result["message"], color, roi_x, roi_y, reader_size, now_str)
+                        drawText(frame, roi_x, roi_y - 50, f"{result['message']}{extra} at: {now_str}", color)
+                        last_info = (result["message"] + extra, color, roi_x, roi_y, reader_size, now_str)
                         display_until = time.time() + DISPLAY_HOLD_SEC
+                        print(scan_history)
 
                 message_expiry_time = time.time() + SEND_INTERVAL_SEC
 
