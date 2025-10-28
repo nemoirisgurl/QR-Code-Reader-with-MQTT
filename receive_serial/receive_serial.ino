@@ -3,7 +3,7 @@
 
 TFT_eSPI tft = TFT_eSPI();
 
-const int toggleBtn = 25;
+const int toggleBtn = 5;
 
 int x = 10;
 int y = 30;
@@ -21,7 +21,11 @@ uint16_t COLOR_BROWN, COLOR_ORANGE;
 void drawCentered(const String& str, int32_t y, uint16_t fgcolor, uint16_t bgcolor = TFT_WHITE, uint8_t textSize = largeTextSize){
   tft.setTextSize(textSize);
   tft.setTextColor(fgcolor, bgcolor);
-  tft.drawString(str, (tft.width() / 2) - str.length() * 8, y);
+  if (textSize == largeTextSize) { // draw texts
+    tft.drawString(str, (tft.width() / 2) - str.length() * 8, y);
+  } else { // draw token
+    tft.drawString(str, (tft.width() / 2) - str.length() * 5, y);
+  }
 }
 
 void drawStatus(int status) {
@@ -37,20 +41,20 @@ void drawStatus(int status) {
     tft.drawRect(rx, ry, w, h, TFT_BLACK);
     tft.fillCircle(rx + w - 20, ry + h / 2, 6, TFT_YELLOW);
     tft.drawCircle(rx + w - 20, ry + h / 2, 6, TFT_BLACK);
-    drawCentered("Checked out", tft.height() - 40, TFT_RED);
+    drawCentered("Checked out", tft.height() - 40, TFT_BLACK);
   } else if (status == 1) {
     // draw checkin
     tft.fillCircle(cx, cy, 50, TFT_GREEN);
     tft.drawLine(cx - 20, cy,      cx - 5,  cy + 20, TFT_WHITE);
     tft.drawLine(cx - 5,  cy + 20, cx + 25, cy - 25, TFT_WHITE);
-    drawCentered("Checked in", tft.height() - 40, TFT_GREEN);
+    drawCentered("Checked in", tft.height() - 40, TFT_BLACK);
   } else {
     tft.fillCircle(cx, cy, 50, TFT_BLUE);
     tft.fillCircle(cx - 20, cy, 8, TFT_WHITE);
     tft.fillCircle(cx,      cy, 8, TFT_WHITE);
     tft.fillCircle(cx + 20, cy, 8, TFT_WHITE);
 
-    drawCentered("Wait", tft.height() - 40, TFT_BLUE);
+    drawCentered("Wait", tft.height() - 40, TFT_BLACK);
   }
 }
 
@@ -60,9 +64,6 @@ void printData(String data) {
   int dividerIndex;
   int fieldIndex = 0;
   String token;
-  int lineY = 40;
-
-  tft.setTextSize(smallTextSize);
 
   while ((dividerIndex = data.indexOf(',', start)) != -1) {
     String message = data.substring(start, dividerIndex);
@@ -72,9 +73,8 @@ void printData(String data) {
     if (fieldIndex == 1) {
       drawStatus(message.toInt());
     } else {
-      drawCentered(message, lineY, COLOR_ORANGE);
+      drawCentered(message, 20, TFT_BLACK, TFT_WHITE, smallTextSize);
       Serial.println(message);
-      lineY += 24;
     }
     start = dividerIndex + 1;
     fieldIndex++;
@@ -89,7 +89,7 @@ void setup() {
   tft.fillScreen(TFT_WHITE);
   tft.setFreeFont(&FreeSans9pt7b);
   tft.setTextColor(TFT_GREEN, TFT_WHITE);
-  drawCentered("Idle", 20, TFT_GREEN);
+  drawCentered("Idle", 20, TFT_BLACK);
   lastUpdate = millis();
   COLOR_BROWN  = tft.color565(165, 42, 42);
   COLOR_ORANGE = tft.color565(255, 165, 0);
@@ -109,7 +109,7 @@ void loop() {
       if (reading == HIGH && stableState == LOW) {
         checkStatus = 1 - checkStatus;
         tft.fillScreen(TFT_WHITE);
-        drawCentered("Mode toggled", 20, TFT_YELLOW);
+        drawCentered("Mode toggled", 20, TFT_BLUE);
         drawStatus(checkStatus);
         Serial.printf("MODE:%d\n", checkStatus);
         lastUpdate = millis();
@@ -127,8 +127,8 @@ void loop() {
   }
   if (millis() - lastUpdate > idleTimeout) {
     tft.fillScreen(TFT_WHITE);
-    drawCentered("Idle", 20, TFT_GREEN);
-    drawStatus(checkStatus);
+    drawCentered("Idle", 20, TFT_BLACK);
+    drawCentered("---", tft.height() - 40, TFT_BLUE);
     lastUpdate = millis();
   }
 }
