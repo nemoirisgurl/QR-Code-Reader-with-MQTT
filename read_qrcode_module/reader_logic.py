@@ -66,7 +66,7 @@ class ReaderLogic:
             }
 
         remain_sec = self.checkin_checkout_duration - time_diff
-        if 0 < remain_sec <= 300: # after check in, before check out
+        if 0 < remain_sec <= self.checkin_checkout_duration / 2: # after check in, before check out
             status = -1
             message = "Too soon to checkout"
             next_checkout_epoch = last_scan_time + self.checkin_checkout_duration
